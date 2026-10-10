@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# commit-msg - recusa mensagem de commit fora do padrao Conventional Commits.
+#
+# Este hook NAO vale automaticamente ao clonar o repositorio: o git nunca
+# instala hooks vindos de fora, porque hook e codigo que roda na sua maquina.
+# Cada pessoa ativa uma vez, na raiz do projeto:
+#
+#     git config core.hooksPath .githooks
+#
+# Para pular a checagem num commit especifico: git commit --no-verify
+
+msg_file="$1"
+
+# O assunto e a primeira linha que nao e comentario nem esta vazia.
+subject=$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d' | head -1)
+
+# Mensagem que o proprio git escreve (merge, fixup, squash) passa direto:
+# quem commita nao a digitou, e recusar travaria rebase e merge.
+case "$subject" in
+	"Merge "*|"Revert "*|fixup!*|squash!*|amend!*) exit 0 ;;
+esac
+
+tipos='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+limite=72
+
+recusa() {
+	printf '\n  \033[1;31mCommit recusado:\033[0m %s\n\n' "$1" >&2
+	printf '  sua mensagem:\n    %s\n\n' "$subject" >&2
+	printf '  formato esperado:\n' >&2
+	printf '    <tipo>(<escopo opcional>): <descricao no imperativo>\n\n' >&2
+	printf '  tipos validos:\n    %s\n\n' "$(printf '%s' "$tipos" | tr '|' ' ')" >&2
+	printf '  exemplos:\n' >&2
+	printf '    feat(sample_entity): adiciona filtro por data de nascimento\n' >&2
+	printf '    fix(document_number): corrige CPF repetido aceito como valido\n' >&2
+	printf '    docs(readme): corrige comando de venv no Windows\n' >&2
+	printf '    chore(deps): fixa psycopg2-binary em 2.9.10\n' >&2
+	printf '    feat(auth)!: exige INTERNAL_TOKEN sem valor padrao\n\n' >&2
+	printf '  O "!" antes dos dois-pontos marca mudanca incompativel.\n' >&2
+	printf '  Para pular esta checagem: git commit --no-verify\n\n' >&2
+	exit 1
+}
+
+if [ -z "$subject" ]; then
+	recusa 'a mensagem esta vazia.'
+fi
+
+if ! printf '%s' "$subject" | grep -qE "^($tipos)(\([a-z0-9._/-]+\))?!?: .+"; then
+	recusa 'nao segue o padrao Conventional Commits.'
+fi
+
+if [ "${#subject}" -gt "$limite" ]; then
+	recusa "o assunto tem ${#subject} caracteres; o limite e $limite."
+fi
+
+case "$subject" in
+	*.) recusa 'o assunto nao leva ponto final.' ;;
+esac
+
+exit 0
