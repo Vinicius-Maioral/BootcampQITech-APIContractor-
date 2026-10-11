@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/clients/c404c404-c404-4c40-8c40-c404c404c404"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "title": "Client not found",
+      "description": "Client with key c404c404-c404-4c40-8c40-c404c404c404 was not found.",
+      "translation": "O cliente com chave c404c404-c404-4c40-8c40-c404c404c404 não foi encontrado.",
+      "code": "QIT002005"
+    }
+  }
+}

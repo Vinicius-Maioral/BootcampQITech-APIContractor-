@@ -84,3 +84,4 @@ CLAUDE.md
 # --- Tipagem estática --------------------------------------
 .mypy_cache/
 .ruff_cache/
+backups/

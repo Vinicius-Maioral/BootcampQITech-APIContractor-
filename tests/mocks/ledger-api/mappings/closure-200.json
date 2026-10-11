@@ -1,0 +1,13 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/contract_ledgers/[^/]+/closure"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "transformers": ["response-template"],
+    "body": "{\"contract_key\": \"{{request.pathSegments.[1]}}\", \"closed_accounts\": 6}"
+  }
+}

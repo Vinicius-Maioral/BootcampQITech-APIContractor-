@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/parties/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "title": "Party not found",
+      "description": "Party with key bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb was not found.",
+      "translation": "A parte com chave bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb não foi encontrada.",
+      "code": "QIT002001"
+    }
+  }
+}

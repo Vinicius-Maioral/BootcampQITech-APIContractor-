@@ -1,0 +1,20 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/parties/11111111-1111-4111-8111-111111111111"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "party_key": "11111111-1111-4111-8111-111111111111",
+      "party_type": "organization",
+      "status": "active",
+      "pix_key": "financeiro@alfa.example",
+      "client_key": "c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c1c1"
+    }
+  }
+}

@@ -22,9 +22,8 @@ services:
       context: .
       target: api
     ports:
-      # Se a porta 3000 ja estiver ocupada na sua maquina, coloque
-      # API_PORT=3001 (ou outra livre) no seu .env.
-      - "${API_PORT:-3000}:3000"
+      # Contract API: porta 3002 no host, 3000 dentro do container.
+      - "${API_PORT:-3002}:3000"
     environment:
       # Dentro do compose, o banco atende pelo nome "db" — nao por localhost.
       # Por isso esta linha nao tem padrao pra sobrescrever: aqui dentro o
@@ -42,18 +41,16 @@ services:
       BANKSLIP_API_URL: ${BANKSLIP_API_URL:-http://localhost:8080}
       BANKSLIP_API_INTERNAL_TOKEN: ${BANKSLIP_API_INTERNAL_TOKEN:-default_token}
       BANKSLIP_API_TIMEOUT: ${BANKSLIP_API_TIMEOUT:-5}
-      REGISTRY_API_URL: ${REGISTRY_API_URL:-http://host.docker.internal:8081}
-      REGISTRY_API_INTERNAL_TOKEN: ${REGISTRY_API_INTERNAL_TOKEN:-default_token}
-      REGISTRY_API_TIMEOUT: ${REGISTRY_API_TIMEOUT:-5}
-      LEDGER_API_URL: ${LEDGER_API_URL:-http://host.docker.internal:8082}
+      PARTY_API_URL: ${PARTY_API_URL:-http://party-mock:8080}
+      PARTY_API_INTERNAL_TOKEN: ${PARTY_API_INTERNAL_TOKEN:-default_token}
+      PARTY_API_TIMEOUT: ${PARTY_API_TIMEOUT:-3}
+      LEDGER_API_URL: ${LEDGER_API_URL:-http://ledger-mock:8080}
       LEDGER_API_INTERNAL_TOKEN: ${LEDGER_API_INTERNAL_TOKEN:-default_token}
       LEDGER_API_TIMEOUT: ${LEDGER_API_TIMEOUT:-5}
     volumes:
-      # Monta o codigo pra dentro do container: salvou o arquivo,
-      # a API recarrega sozinha (o --reload ali embaixo).
+      # Code is mounted for development; restart api after Python changes.
       - ./src:/app
-    # --reload: salvou o arquivo, a API reinicia sozinha.
-    command: uvicorn app:app --host 0.0.0.0 --port 3000 --no-server-header --reload
+    command: uvicorn app:app --host 0.0.0.0 --port 3000 --no-server-header --no-access-log
     healthcheck:
       # "Subiu" nao e a mesma coisa que "ja responde". E esta checagem
       # que diz quando a API passa a atender de verdade — espere ela
@@ -67,6 +64,36 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      party-mock:
+        condition: service_healthy
+      ledger-mock:
+        condition: service_healthy
+
+  party-mock:
+    image: wiremock/wiremock:3.9.1
+    ports:
+      - "${PARTY_MOCK_PORT:-8091}:8080"
+    volumes:
+      - ./tests/mocks/party-api:/home/wiremock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/__admin/mappings > /dev/null"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  ledger-mock:
+    image: wiremock/wiremock:3.9.1
+    ports:
+      - "${LEDGER_MOCK_PORT:-8093}:8080"
+    volumes:
+      - ./tests/mocks/ledger-api:/home/wiremock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/__admin/mappings > /dev/null"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
 
   db:
     build: ./database/.
@@ -75,12 +102,11 @@ services:
       POSTGRES_PASSWORD: bootcamp
       POSTGRES_DB: bootcamp
     ports:
-      # Mesma ideia: DB_PORT=5433 no .env se a 5432 estiver ocupada.
-      - "${DB_PORT:-5432}:5432"
+      # PostgreSQL de contratos: 5434 no host, 5432 na rede do Compose.
+      - "${DB_PORT:-5434}:5432"
     healthcheck:
       # A API so sobe depois que o banco responder de verdade.
       test: ["CMD-SHELL", "pg_isready -U bootcamp -d bootcamp"]
       interval: 3s
       timeout: 3s
       retries: 20
-

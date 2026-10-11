@@ -1,0 +1,20 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/parties/ffffffff-ffff-4fff-8fff-ffffffffffff"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "party_key": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "party_type": "individual",
+      "status": "active",
+      "pix_key": "erro@mock",
+      "client_key": null
+    }
+  }
+}

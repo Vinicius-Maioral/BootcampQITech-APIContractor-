@@ -1,0 +1,22 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/clients/.*"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "transformers": [
+      "response-template"
+    ],
+    "jsonBody": {
+      "title": "Client not found",
+      "description": "Client with key {{request.pathSegments.[1]}} was not found.",
+      "translation": "O cliente com chave {{request.pathSegments.[1]}} não foi encontrado.",
+      "code": "QIT002005"
+    }
+  }
+}

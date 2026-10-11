@@ -4,7 +4,7 @@
     "uuid": {
       "type": "string",
       "format": "uuid",
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
     "role": {
       "enum": [
@@ -70,129 +70,97 @@
         "role": {
           "$ref": "#/$defs/role"
         },
-        "allocation_type": {
+        "type": {
           "enum": [
             "percentage",
             "fixed",
             "remainder"
           ]
         },
-        "percentage": {
-          "oneOf": [
-            {
-              "type": "string",
-              "pattern": "^(?:0|[1-9][0-9]{0,2})(?:\\.[0-9]{1,4})?$"
-            },
-            {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 999.9999,
-              "multipleOf": 0.0001
-            }
-          ]
-        },
-        "amount_in_cents": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 99999999999999999999
-        }
+        "value": {}
       },
       "required": [
         "purpose_code",
         "party_key",
         "role",
-        "allocation_type"
+        "type"
       ],
       "additionalProperties": false,
       "oneOf": [
         {
           "properties": {
-            "allocation_type": {
+            "type": {
               "const": "percentage"
+            },
+            "value": {
+              "$ref": "#/$defs/percentage"
             }
           },
           "required": [
-            "percentage"
-          ],
-          "not": {
-            "required": [
-              "amount_in_cents"
-            ]
-          }
+            "value"
+          ]
         },
         {
           "properties": {
-            "allocation_type": {
+            "type": {
               "const": "fixed"
+            },
+            "value": {
+              "$ref": "#/$defs/money"
             }
           },
           "required": [
-            "amount_in_cents"
-          ],
-          "not": {
-            "required": [
-              "percentage"
-            ]
-          }
+            "value"
+          ]
         },
         {
           "properties": {
-            "allocation_type": {
+            "type": {
               "const": "remainder"
             }
           },
           "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "percentage"
-                ]
-              },
-              {
-                "required": [
-                  "amount_in_cents"
-                ]
-              }
+            "required": [
+              "value"
             ]
           }
         }
       ]
     },
     "split": {
-      "type": "object",
-      "properties": {
-        "rent_amount_in_cents": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 99999999999999999999
-        },
-        "items": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 6,
-          "items": {
-            "$ref": "#/$defs/item"
-          },
-          "contains": {
-            "type": "object",
-            "properties": {
-              "allocation_type": {
-                "const": "remainder"
-              }
-            },
-            "required": [
-              "allocation_type"
-            ]
-          },
-          "minContains": 1,
-          "maxContains": 1
-        }
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/item"
       },
-      "required": [
-        "rent_amount_in_cents",
-        "items"
-      ],
-      "additionalProperties": false
+      "contains": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "remainder"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "percentage": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,2})(?:\\.[0-9]{1,4})?$"
+    },
+    "money": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 99999999999999999999
+    },
+    "rent": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 99999999999999999999
     }
   }
 }

@@ -4,3 +4,4 @@
 # tudo aqui roda dentro de um container Linux, um arquivo que chega com
 # CRLF quebra de um jeito dificil de entender. Esta linha normaliza.
 * text=auto eol=lf
+tests/mocks/**/mappings/*.json -text

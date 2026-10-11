@@ -1,0 +1,11 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/parties/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+  },
+  "response": {
+    "status": 503,
+    "fixedDelayMilliseconds": 2000
+  }
+}

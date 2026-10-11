@@ -3,6 +3,10 @@ from decimal import Decimal
 from errors.base_error import QIException
 
 
+def _with_source_code(description, source_code):
+    return description + (f" Source error code: {source_code}." if source_code else "")
+
+
 class NotFoundSampleEntity(QIException):
     code = "QIT001001"
 
@@ -172,10 +176,10 @@ class InvalidSplitBeneficiary(QIException):
 class PartyNotActiveInRegistry(QIException):
     code = "QIT003007"
 
-    def __init__(self, party_key: str) -> None:
+    def __init__(self, party_key: str, source_code: str = None) -> None:
         title = "Conflict"
         http_status = 409
-        description = f"Party {party_key} is not active in the registry."
+        description = _with_source_code(f"Party {party_key} is not active in the registry.", source_code)
         translation = f"A parte {party_key} não está ativa no Cadastro."
         super().__init__(title, self.code, http_status, description, translation)
 
@@ -183,10 +187,10 @@ class PartyNotActiveInRegistry(QIException):
 class PartyNotFoundInRegistry(QIException):
     code = "QIT003008"
 
-    def __init__(self, party_key: str) -> None:
+    def __init__(self, party_key: str, source_code: str = None) -> None:
         title = "Unprocessable Entity"
         http_status = 422
-        description = f"Party {party_key} was not found in the registry."
+        description = _with_source_code(f"Party {party_key} was not found in the registry.", source_code)
         translation = f"A parte {party_key} não foi encontrada no Cadastro."
         super().__init__(title, self.code, http_status, description, translation)
 
@@ -194,10 +198,10 @@ class PartyNotFoundInRegistry(QIException):
 class LedgerRefusedSplit(QIException):
     code = "QIT003009"
 
-    def __init__(self, contract_key: str) -> None:
+    def __init__(self, contract_key: str, source_code: str = None) -> None:
         title = "Unprocessable Entity"
         http_status = 422
-        description = f"The Ledger refused the split for contract {contract_key}."
+        description = _with_source_code(f"The Ledger refused the split for contract {contract_key}.", source_code)
         translation = f"O Ledger recusou o rateio do contrato {contract_key}."
         super().__init__(title, self.code, http_status, description, translation)
 
@@ -205,10 +209,10 @@ class LedgerRefusedSplit(QIException):
 class DependencyUnavailable(QIException):
     code = "QIT003010"
 
-    def __init__(self, dependency_name: str) -> None:
+    def __init__(self, dependency_name: str, source_code: str = None) -> None:
         title = "Service Unavailable"
         http_status = 503
-        description = f"Dependency {dependency_name} is temporarily unavailable."
+        description = _with_source_code(f"Dependency {dependency_name} is temporarily unavailable.", source_code)
         translation = f"O serviço {dependency_name} está temporariamente indisponível."
         super().__init__(title, self.code, http_status, description, translation)
 
@@ -238,10 +242,10 @@ class SplitPercentagesTooHigh(QIException):
 class LedgerConflict(QIException):
     code = "QIT003013"
 
-    def __init__(self, contract_key: str, operation: str = "split") -> None:
+    def __init__(self, contract_key: str, operation: str = "split", source_code: str = None) -> None:
         title = "Conflict"
         http_status = 409
-        description = f"The Ledger reported a conflict for {operation} of contract {contract_key}."
+        description = _with_source_code(f"The Ledger reported a conflict for {operation} of contract {contract_key}.", source_code)
         translation = f"O Ledger informou um conflito na operação {operation} do contrato {contract_key}."
         super().__init__(title, self.code, http_status, description, translation)
 

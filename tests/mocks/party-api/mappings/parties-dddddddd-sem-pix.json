@@ -1,0 +1,20 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/parties/dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "party_key": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "party_type": "individual",
+      "status": "active",
+      "pix_key": null,
+      "client_key": null
+    }
+  }
+}

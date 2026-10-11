@@ -1,0 +1,19 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/clients/c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c1c1"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "client_key": "c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c1c1",
+      "party_key": "11111111-1111-4111-8111-111111111111",
+      "status": "active",
+      "platform_fee_percentage": "1.0000"
+    }
+  }
+}

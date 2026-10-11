@@ -30,8 +30,7 @@
       "type": "array",
       "items": {
         "$ref": "contract_common.json#/$defs/party"
-      },
-      "minItems": 3
+      }
     },
     "split": {
       "$ref": "contract_common.json#/$defs/split"
@@ -47,6 +46,9 @@
         "null"
       ],
       "maxLength": 255
+    },
+    "rent_amount_in_cents": {
+      "$ref": "contract_common.json#/$defs/rent"
     }
   },
   "required": [
@@ -56,7 +58,8 @@
     "start_date",
     "parties",
     "split",
-    "actor"
+    "actor",
+    "rent_amount_in_cents"
   ],
   "additionalProperties": false
 }

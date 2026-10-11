@@ -1,0 +1,20 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/contract_ledgers",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$[?(@.rent_amount_in_cents == 422008)]" }
+    ]
+  },
+  "response": {
+    "status": 422,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "title": "Purpose pair not allowed",
+      "description": "Purpose pair COLLECTION -> item is not in purpose_rule.",
+      "translation": "par de propósitos proibido / contratos diferentes",
+      "code": "QIT001008"
+    }
+  }
+}

@@ -6,24 +6,15 @@
       "type": "string",
       "pattern": "^(?:[1-9]|[1-9][0-9]|100)$"
     },
-    "offset": {
+    "page": {
       "type": "string",
       "pattern": "^(?:0|[1-9][0-9]*)$"
     },
-    "client_key": {
-      "type": "string",
-      "format": "uuid",
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    "party_key": {
+      "$ref": "contract_common.json#/$defs/uuid"
     },
-    "status": {
-      "type": "array",
-      "items": {
-        "enum": [
-          "draft",
-          "active",
-          "terminated"
-        ]
-      }
+    "client_key": {
+      "$ref": "contract_common.json#/$defs/uuid"
     },
     "external_reference": {
       "type": "string",
@@ -31,5 +22,37 @@
       "maxLength": 100
     }
   },
+  "oneOf": [
+    {
+      "required": [
+        "party_key"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "client_key"
+            ]
+          },
+          {
+            "required": [
+              "external_reference"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "client_key",
+        "external_reference"
+      ],
+      "not": {
+        "required": [
+          "party_key"
+        ]
+      }
+    }
+  ],
   "additionalProperties": false
 }

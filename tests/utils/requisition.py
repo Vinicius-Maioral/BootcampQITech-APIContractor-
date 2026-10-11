@@ -27,7 +27,7 @@ class ClientRequisition:
             headers = dict()
 
         api_host = environ.get("SERVER_LOCALHOST", "0.0.0.0")
-        api_port = environ.get("API_PORT", "3000")
+        api_port = environ.get("API_PORT", "3002")
         base_url = f"http://{api_host}:{api_port}"
 
         url = f"{base_url}{endpoint}"

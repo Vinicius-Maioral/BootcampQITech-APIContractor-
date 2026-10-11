@@ -2,6 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
+    "rent_amount_in_cents": {
+      "$ref": "contract_common.json#/$defs/rent"
+    },
     "split": {
       "$ref": "contract_common.json#/$defs/split"
     },
@@ -19,6 +22,7 @@
     }
   },
   "required": [
+    "rent_amount_in_cents",
     "split",
     "actor"
   ],

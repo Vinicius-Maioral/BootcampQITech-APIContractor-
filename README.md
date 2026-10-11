@@ -3,6 +3,20 @@
 > A API foi migrada para contratos. Consulte [o fluxo atual, rotas, exemplos e testes](docs/contratos.md).
 > Os exemplos de Sample Entity abaixo são material histórico e suas rotas foram substituídas.
 
+Para preparar o banco existente e subir API, Cadastro e Ledger simulados no Docker:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo-contract.ps1
+```
+
+O schema é mantido em `database/database.sql`, sem migrations. A preparação salva um backup
+e verifica o SQL em transação, preservando os dados existentes.
+
+O ambiente atual atende em `http://localhost:3002`, com PostgreSQL em `5434`,
+Cadastro mock em `8091` e Ledger mock em `8093`, seguindo os mappings oficiais do 01b.
+Consulte [a configuração e os cenários dos mocks](docs/mocks.md).
+
 Projeto base do Bootcamp: uma API REST em **Python + FastAPI**, com banco
 **PostgreSQL**, rodando em **Docker**.
 

@@ -1,0 +1,22 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/parties/.*"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "transformers": [
+      "response-template"
+    ],
+    "jsonBody": {
+      "title": "Party not found",
+      "description": "Party with key {{request.pathSegments.[1]}} was not found.",
+      "translation": "A parte com chave {{request.pathSegments.[1]}} não foi encontrada.",
+      "code": "QIT002001"
+    }
+  }
+}

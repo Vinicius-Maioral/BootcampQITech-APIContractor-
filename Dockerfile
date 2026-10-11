@@ -7,6 +7,7 @@ RUN adduser --system --no-create-home user
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv "$VIRTUAL_ENV"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONUTF8=1 PYTHONUNBUFFERED=1
 
 # Copiar so o requirements primeiro faz o Docker reaproveitar o cache:
 # enquanto as dependencias nao mudam, ele nao reinstala tudo de novo.
@@ -22,5 +23,4 @@ USER user
 
 # --no-server-header: o uvicorn nao anuncia a propria versao, que e
 # informacao de menos pra quem procura uma versao com falha conhecida.
-CMD uvicorn app:app --host 0.0.0.0 --port 3000 --no-server-header
-
+CMD uvicorn app:app --host 0.0.0.0 --port 3000 --no-server-header --no-access-log

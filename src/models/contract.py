@@ -14,8 +14,9 @@ class Contract(Base):
     property_reference = Column(String(255), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date)
-    # Ledger identity and fee snapshot, confirmed during activation.
+    # Legacy ledger identity is retained for existing data; 01b uses contract_key.
     ledger_key = Column(String(255))
+    # Commercial snapshot confirmed at activation, reused by subsequent versions.
     platform_fee_percentage = Column(Numeric(7, 4))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

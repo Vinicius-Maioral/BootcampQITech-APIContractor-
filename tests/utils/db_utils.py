@@ -15,7 +15,7 @@ RESET_QUERIES = [
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_FILE = PROJECT_ROOT / "database" / "database.sql"
 
-DEFAULT_DATABASE_URL = "postgresql+psycopg2://bootcamp:bootcamp@localhost:5432/bootcamp"
+DEFAULT_DATABASE_URL = "postgresql+psycopg2://bootcamp:bootcamp@localhost:5434/bootcamp"
 
 DATABASE_OFFLINE = (
     "Não consegui falar com o banco em {host}:{port}.\n"

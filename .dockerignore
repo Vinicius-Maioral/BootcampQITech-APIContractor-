@@ -19,6 +19,7 @@ __pycache__
 .ruff_cache
 .coverage
 htmlcov
+backups
 
 # Segredo NUNCA entra na imagem. As variaveis chegam por ambiente,
 # na hora de rodar (olha o "environment" no docker-compose.yml).

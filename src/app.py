@@ -159,7 +159,7 @@ def create_app() -> FastAPI:
     )
 
     application.add_api_route(
-        "/contracts/{contract_key}/closure", contract_resource.on_terminate, methods=["POST"],
+        "/contracts/{contract_key}/termination", contract_resource.on_terminate, methods=["POST"],
     )
 
     register_error_handlers(application)

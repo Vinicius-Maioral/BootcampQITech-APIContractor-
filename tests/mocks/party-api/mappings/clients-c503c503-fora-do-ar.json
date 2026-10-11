@@ -1,0 +1,11 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/clients/c503c503-c503-4c50-8c50-c503c503c503"
+  },
+  "response": {
+    "status": 503,
+    "fixedDelayMilliseconds": 2000
+  }
+}

@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 import database
 from controllers import ContractController
 from errors import QIException
-from .test_contract_controller import LedgerMock, RegistryMock, payload
+from .test_contract_controller import LedgerMock, RegistryMock, payload, split_body
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def pg_factory(monkeypatch):
     engine = create_engine(url, connect_args={'options': f'-csearch_path={schema}'})
     try:
         sql = (Path(__file__).resolve().parents[2] / 'database' / 'database.sql').read_text(encoding='utf-8')
-        sql = sql[sql.index('CREATE FUNCTION append_only_guard()'):]
+        # Entire database.sql is the reusable contract bootstrap.
         with engine.begin() as connection:
             with connection.connection.cursor() as cursor:
                 cursor.execute(sql)
@@ -99,7 +99,7 @@ def test_concurrent_split_versions(pg_factory, payload):
         controller = build_controller(payload, ledger)
         try:
             barrier.wait(timeout=10)
-            return controller.create_split_version(key, payload['split'], 'race')['version']
+            return controller.create_split_version(key, split_body(payload), 'race')['split_version']
         finally:
             close_controller(controller)
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -113,11 +113,7 @@ def test_concurrent_activation(pg_factory, payload):
     barrier = Barrier(2)
     def worker():
         controller = build_controller(payload, ledger)
-        original = controller.registry.get_client
-        def after_snapshot(client_key):
-            barrier.wait(timeout=10)
-            return original(client_key)
-        controller.registry.get_client = after_snapshot
+        barrier.wait(timeout=10)
         try:
             return controller.activate(key, 'race')['status']
         except QIException as error:
@@ -126,7 +122,7 @@ def test_concurrent_activation(pg_factory, payload):
             close_controller(controller)
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(lambda _: worker(), range(2)))
-    assert sorted(results) == ['QIT003003', 'active']
+    assert results == ['active', 'active']
     assert len(ledger.operations) == 1
 
 
@@ -138,7 +134,7 @@ def test_version_racing_closure(pg_factory, payload):
         try:
             barrier.wait(timeout=10)
             if operation == 'split':
-                return controller.create_split_version(key, payload['split'], 'race')
+                return controller.create_split_version(key, split_body(payload), 'race')
             return controller.terminate(key, 'race')
         except QIException as error:
             return error.code
@@ -147,23 +143,23 @@ def test_version_racing_closure(pg_factory, payload):
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(worker, ['split', 'closure']))
     assert results[1]['status'] == 'terminated'
-    assert results[0] == 'QIT003003' or results[0]['version'] == 2
+    assert results[0] == 'QIT003003' or results[0]['split_version'] == 2
     assert ledger.calls[-1][0] == 'closure'
     controller = build_controller(payload, ledger)
     try:
         final = controller.get_by_key(key)
         assert final['status'] == 'terminated'
-        assert len(final['split_versions']) == (1 if results[0] == 'QIT003003' else 2)
+        assert final['split_version'] == (1 if results[0] == 'QIT003003' else 2)
     finally:
         close_controller(controller)
 
 
 def test_append_only_history_and_numeric_precision(pg_factory, payload):
-    payload['split']['rent_amount_in_cents'] = 99999999999999999999
+    payload['rent_amount_in_cents'] = 99999999999999999999
     key, _ = setup_contract(payload)
     controller = build_controller(payload)
     try:
-        assert controller.get_by_key(key)['split_versions'][0]['rent_amount_in_cents'] == 99999999999999999999
+        assert controller.get_by_key(key)['rent_amount_in_cents'] == 99999999999999999999
     finally:
         close_controller(controller)
     for sql in ("UPDATE contract_status_event SET actor='modified'", 'DELETE FROM contract_status_event',
@@ -171,3 +167,73 @@ def test_append_only_history_and_numeric_precision(pg_factory, payload):
         with pytest.raises(DBAPIError, match='append-only'):
             with pg_factory.kw['bind'].begin() as connection:
                 connection.exec_driver_sql(sql)
+
+
+def test_database_sql_repeat_preserves_contracts(pg_factory, payload):
+    key, _ = setup_contract(payload)
+    sql = (Path(__file__).resolve().parents[2] / 'database/database.sql').read_text(encoding='utf-8')
+    with pg_factory.kw['bind'].begin() as connection:
+        before = connection.exec_driver_sql('SELECT * FROM contract').all()
+        with connection.connection.cursor() as cursor:
+            cursor.execute(sql)
+            cursor.execute(sql)
+        assert connection.exec_driver_sql('SELECT * FROM contract').all() == before
+        assert connection.exec_driver_sql('SELECT COUNT(*) FROM contract_status').scalar() == 3
+        assert connection.exec_driver_sql('SELECT COUNT(*) FROM contract_role').scalar() == 4
+        assert connection.exec_driver_sql('SELECT contract_key FROM contract').scalar() == key
+
+
+def test_schema_verifier_rejects_incompatible_table(pg_factory):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('schema_prepare', Path(__file__).resolve().parents[2] / 'database/prepare.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    engine = pg_factory.kw['bind']
+    with engine.begin() as connection:
+        module.verify(connection)
+    with pytest.raises(RuntimeError, match='external_reference'):
+        with engine.begin() as connection:
+            connection.exec_driver_sql('ALTER TABLE contract ALTER COLUMN external_reference TYPE VARCHAR(101)')
+            module.verify(connection)
+    # DDL is rolled back with the failed verification.
+    with engine.begin() as connection:
+        module.verify(connection)
+
+
+def test_advisory_lock_released_after_dependency_failure(pg_factory,payload):
+    from requests.exceptions import Timeout
+    key,_=setup_contract(payload)
+    controller=build_controller(payload)
+    try:
+        controller.ledger.exception=Timeout()
+        with pytest.raises(QIException) as error:
+            controller.activate(key,'test')
+        assert error.value.code=='QIT003010'
+        controller.ledger.exception=None
+        assert controller.activate(key,'retry')['status']=='active'
+    finally:
+        close_controller(controller)
+
+
+def test_concurrent_activation_and_termination(pg_factory,payload):
+    key,ledger=setup_contract(payload)
+    barrier=Barrier(2)
+    def worker(operation):
+        controller=build_controller(payload,ledger)
+        try:
+            barrier.wait(timeout=10)
+            return controller.activate(key,'race') if operation=='activate' else controller.terminate(key,'race')
+        except QIException as error:
+            return error.code
+        finally:
+            close_controller(controller)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results=list(executor.map(worker,['activate','terminate']))
+    assert results[1]['status']=='terminated'
+    assert results[0]=='QIT003003' or results[0]['status']=='active'
+    controller=build_controller(payload,ledger)
+    try:
+        assert controller.get_by_key(key)['status']=='terminated'
+        assert ledger.calls[-1][0]=='closure'
+    finally:
+        close_controller(controller)

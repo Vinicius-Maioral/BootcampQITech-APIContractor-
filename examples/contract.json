@@ -1,0 +1,81 @@
+{
+  "client_key": "c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c1c1",
+  "external_reference": "ALFA-2026-0042",
+  "property_reference": "APT-101",
+  "start_date": "2026-09-01",
+  "rent_amount_in_cents": 500000,
+  "parties": [
+    {
+      "party_key": "33333333-3333-4333-8333-333333333333",
+      "role": "tenant"
+    },
+    {
+      "party_key": "22222222-2222-4222-8222-222222222222",
+      "role": "landlord"
+    },
+    {
+      "party_key": "11111111-1111-4111-8111-111111111111",
+      "role": "administrator"
+    },
+    {
+      "party_key": "44444444-4444-4444-8444-444444444444",
+      "role": "provider"
+    },
+    {
+      "party_key": "55555555-5555-4555-8555-555555555555",
+      "role": "provider"
+    },
+    {
+      "party_key": "66666666-6666-4666-8666-666666666666",
+      "role": "provider"
+    },
+    {
+      "party_key": "77777777-7777-4777-8777-777777777777",
+      "role": "provider"
+    }
+  ],
+  "split": [
+    {
+      "purpose_code": "RENT",
+      "party_key": "22222222-2222-4222-8222-222222222222",
+      "role": "landlord",
+      "type": "remainder"
+    },
+    {
+      "purpose_code": "OWN",
+      "party_key": "11111111-1111-4111-8111-111111111111",
+      "role": "administrator",
+      "type": "percentage",
+      "value": "10.0000"
+    },
+    {
+      "purpose_code": "IPTU",
+      "party_key": "44444444-4444-4444-8444-444444444444",
+      "role": "provider",
+      "type": "fixed",
+      "value": 30000
+    },
+    {
+      "purpose_code": "CONDO",
+      "party_key": "55555555-5555-4555-8555-555555555555",
+      "role": "provider",
+      "type": "fixed",
+      "value": 80000
+    },
+    {
+      "purpose_code": "WATER",
+      "party_key": "66666666-6666-4666-8666-666666666666",
+      "role": "provider",
+      "type": "fixed",
+      "value": 12000
+    },
+    {
+      "purpose_code": "ELECTRICITY",
+      "party_key": "77777777-7777-4777-8777-777777777777",
+      "role": "provider",
+      "type": "fixed",
+      "value": 18000
+    }
+  ],
+  "actor": "erp-alfa"
+}

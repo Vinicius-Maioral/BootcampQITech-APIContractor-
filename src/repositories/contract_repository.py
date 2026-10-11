@@ -69,8 +69,6 @@ class ContractRepository:
         for name in ('client_key', 'external_reference'):
             if filters.get(name) is not None:
                 query = query.filter(getattr(Contract, name) == filters[name])
-        if filters.get('status_enumerators'):
-            query = query.join(Contract.status).filter(
-                ContractStatus.enumerator.in_(filters['status_enumerators'])
-            )
+        if filters.get('party_key'):
+            query = query.filter(Contract.parties.any(ContractParty.party_key == filters['party_key']))
         return query.order_by(Contract.created_at.desc(), Contract.id.desc()).limit(limit + 1).offset(offset).all()

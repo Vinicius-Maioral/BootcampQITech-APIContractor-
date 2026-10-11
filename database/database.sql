@@ -1,18 +1,18 @@
-CREATE FUNCTION append_only_guard() RETURNS TRIGGER AS $func$
+CREATE OR REPLACE FUNCTION append_only_guard() RETURNS TRIGGER AS $func$
 BEGIN
     RAISE EXCEPTION '% e append-only', TG_TABLE_NAME;
 END;
 $func$ LANGUAGE plpgsql;
 
-CREATE TABLE contract_status(
+CREATE TABLE IF NOT EXISTS contract_status(
     id              SERIAL PRIMARY KEY,
     enumerator      VARCHAR(50) NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT(NOW()),
     UNIQUE(enumerator)
 );
-INSERT INTO contract_status (enumerator) VALUES ('draft'), ('active'), ('terminated');
+INSERT INTO contract_status (enumerator) VALUES ('draft'), ('active'), ('terminated') ON CONFLICT (enumerator) DO NOTHING;
 
-CREATE TABLE contract_role(
+CREATE TABLE IF NOT EXISTS contract_role(
     id              SERIAL PRIMARY KEY,
     enumerator      VARCHAR(50) NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT(NOW()),
@@ -20,9 +20,9 @@ CREATE TABLE contract_role(
 );
 -- 'platform' NAO e papel de contrato: a taxa da plataforma e acordo
 -- comercial com o cliente, nao clausula da locacao
-INSERT INTO contract_role (enumerator) VALUES ('tenant'), ('landlord'), ('administrator'), ('provider');
+INSERT INTO contract_role (enumerator) VALUES ('tenant'), ('landlord'), ('administrator'), ('provider') ON CONFLICT (enumerator) DO NOTHING;
 
-CREATE TABLE contract(
+CREATE TABLE IF NOT EXISTS contract(
     id                  SERIAL PRIMARY KEY,
     contract_key        CHAR(36) NOT NULL,
     client_key          CHAR(36) NOT NULL,          -- Cadastro; nao e FK
@@ -38,7 +38,7 @@ CREATE TABLE contract(
     UNIQUE(client_key, external_reference)
 );
 
-CREATE TABLE contract_status_event(
+CREATE TABLE IF NOT EXISTS contract_status_event(
     id              SERIAL PRIMARY KEY,
     contract_id     INTEGER NOT NULL REFERENCES contract(id),
     from_status_id  INTEGER REFERENCES contract_status(id),     -- nulo ao nascer
@@ -50,7 +50,7 @@ CREATE TABLE contract_status_event(
     created_at      TIMESTAMPTZ NOT NULL DEFAULT(NOW())
 );
 
-CREATE TABLE contract_party(
+CREATE TABLE IF NOT EXISTS contract_party(
     id                  SERIAL PRIMARY KEY,
     contract_id         INTEGER NOT NULL REFERENCES contract(id),
     party_key           CHAR(36) NOT NULL,          -- Cadastro; nao e FK
@@ -59,7 +59,7 @@ CREATE TABLE contract_party(
     UNIQUE(contract_id, party_key, contract_role_id)
 );
 
-CREATE TABLE split_version(
+CREATE TABLE IF NOT EXISTS split_version(
     id                      SERIAL PRIMARY KEY,
     contract_id             INTEGER NOT NULL REFERENCES contract(id),
     version                 INTEGER NOT NULL,
@@ -75,7 +75,7 @@ CREATE TABLE split_version(
     CHECK (rent_amount_in_cents > 0)
 );
 
-CREATE TABLE split_item(
+CREATE TABLE IF NOT EXISTS split_item(
     id                  SERIAL PRIMARY KEY,
     split_version_id    INTEGER NOT NULL REFERENCES split_version(id),
     contract_party_id   INTEGER NOT NULL REFERENCES contract_party(id),  -- beneficiario + papel
@@ -91,11 +91,19 @@ CREATE TABLE split_item(
     CHECK ((allocation_type = 'fixed')      = (amount_in_cents IS NOT NULL))
 );
 
-CREATE TRIGGER contract_status_event_no_change
-    BEFORE UPDATE OR DELETE ON contract_status_event
-    FOR EACH ROW EXECUTE FUNCTION append_only_guard();
-CREATE TRIGGER contract_status_event_no_truncate
-    BEFORE TRUNCATE ON contract_status_event
-    FOR EACH STATEMENT EXECUTE FUNCTION append_only_guard();
+ALTER TABLE contract ADD COLUMN IF NOT EXISTS ledger_key VARCHAR(255);
+ALTER TABLE contract ADD COLUMN IF NOT EXISTS platform_fee_percentage NUMERIC(7,4);
 
-CREATE INDEX contract_party_by_party ON contract_party (party_key);
+DO $guard$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='contract_status_event'::regclass AND tgname='contract_status_event_no_change') THEN
+        CREATE TRIGGER contract_status_event_no_change BEFORE UPDATE OR DELETE ON contract_status_event
+        FOR EACH ROW EXECUTE FUNCTION append_only_guard();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='contract_status_event'::regclass AND tgname='contract_status_event_no_truncate') THEN
+        CREATE TRIGGER contract_status_event_no_truncate BEFORE TRUNCATE ON contract_status_event
+        FOR EACH STATEMENT EXECUTE FUNCTION append_only_guard();
+    END IF;
+END;
+$guard$;
+CREATE INDEX IF NOT EXISTS contract_party_by_party ON contract_party (party_key);

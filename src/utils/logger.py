@@ -36,6 +36,10 @@ class RequestIdFilter(logging.Filter):
 
 def setup_logging() -> None:
     """Liga o log da aplicação. Chamada uma vez, quando a API sobe."""
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
     level = logging.INFO
     if APP_ENV.upper() in ("LOCAL", "TEST"):
         level = logging.DEBUG

@@ -1,0 +1,46 @@
+{
+  "origin": "bootcamp-qi-tech-docs/docs/mocks",
+  "wiremock_image": "wiremock/wiremock:3.9.1",
+  "services": {
+    "party-api": {
+      "count": 21,
+      "sha256": {
+        "clients-9c9c9c9c-plataforma.json": "33e82cee3789ffd0a7d5f10d37f147d4c97ed0de5730afedae89f669d16f43cc",
+        "clients-c1c1c1c1-alfa.json": "7c95b7af74fc0c88bb4eb8fc0f8e93410e1e0dc357793cd55208b11ac610e0f5",
+        "clients-c404c404-404.json": "af2d67a65d2589629ba43ddff7946a55e367099fc4f92a2feee52c22503b23e3",
+        "clients-c503c503-fora-do-ar.json": "145ee06b1b972b2eae7a46ea180314e003ff170b0698d02206f7ef3e6d568460",
+        "clients-pega-tudo-404.json": "390e9848289475e68c6baa9ed6307b35f976f15d1dade6a9ea2d1a43ae711ba6",
+        "parties-11111111-alfa.json": "846e7df1a45d4c7c361155471136a4c13ea808e6a6cd6f76d2ded14efcc03cbb",
+        "parties-22222222-ana.json": "6aa78860f2ad47a464cdf218ec15e652a523f5b0a2f95cf546b968e2576f1039",
+        "parties-33333333-bruno.json": "a80e231e3e09d60615020bfb2f95eb3d43efd700ce0ea9a3ac5a345cad1493d3",
+        "parties-44444444-prefeitura.json": "3661c0db1a22b1ac5121e947a3d2cae530cf8a94b538ad39c6995e3585852224",
+        "parties-55555555-condominio.json": "0a434bab910b6ed5300306ce3d3c502d368c2b52fc3a0e65bbc08a18ab04057f",
+        "parties-66666666-agua.json": "a7224e76102d18798a346fad817c5e75b35b2888a52fd3606bff2f95de578243",
+        "parties-77777777-luz.json": "88418be097cbcae8663444f2a13551628108ba83e433175702e5a574b72b8a29",
+        "parties-88888888-carlos.json": "ec2e7d353711a17b5b4cf10626b7c5b0dd476a8ca0aba3323911ef9f699bcb48",
+        "parties-99999999-plataforma.json": "2442ee2ed6c7576fb3e103c3d790050640e6435c51a6fcf09e160d62d462b65b",
+        "parties-aaaaaaaa-pendente.json": "8e2da09fc40d222184d25d06dae804d09f5f85b2078a172b8773e4cc2309025e",
+        "parties-bbbbbbbb-404.json": "2c13953c22014a725cdacecffbaed5f99ecc2c038b1b3f9ad5d54b729a064b73",
+        "parties-cccccccc-fora-do-ar.json": "69eb7d1cc71095b50d3da27a0296ce4774cb78566d37cdc52666734325d29159",
+        "parties-dddddddd-sem-pix.json": "2c607e53efe2e55744b7d5ff60ecc73eca3d13f40b71e4b039cafc91934ddd3d",
+        "parties-eeeeeeee-pix-timeout.json": "455a8e606ba597d4ca78bb88792db30a1c98af9857b087f0b4421f7e53b950c6",
+        "parties-ffffffff-pix-erro.json": "67c0560e08e4f689658652ca81cdbcd13f26586a653038c510d7453339197fd5",
+        "parties-pega-tudo-404.json": "7098cc105fe55331178f9671cdade9de9b0402398615ad7ea0a89ad1f575838e"
+      }
+    },
+    "ledger-api": {
+      "count": 9,
+      "sha256": {
+        "closure-200.json": "0e6540495e69c7d5267ec392f9e36bc2f4b851710ebbd053ad3248cd6fe6e9b6",
+        "closure-fora-do-ar.json": "d6a2bb1dbb5d5979fb04303eefbd8ac1da45bdd00ac8b7a35e7e80cabb4fb163",
+        "closure-saldo-retido.json": "b0488eefd685aa8cd9984aa4803448eebe1a6af6fc0438d7a6d8f705c2a9d95f",
+        "contract-ledgers-201.json": "3f8ec6c5390acdbe2b3d48327d482af993b3be87006722a91e1d82c2aed32f9a",
+        "contract-ledgers-408200-1-atrasa.json": "bcfba3aada7b1c282b1cfbd085952f5200a0478ef20cac09e42f022447579985",
+        "contract-ledgers-408200-2-replay.json": "d378721c061bc30a2e50ee173688cd5db104e965e249f8de63b7aab622007d4d",
+        "contract-ledgers-409032.json": "2ae0d274b3f8c9f91c6ba6d495671076bc6433957be159cae14210d48d6b068f",
+        "contract-ledgers-422008.json": "61ae7a85e44ec10f0f892ddb3efe4b9fb3c99157a9b3f469f215760e643072d4",
+        "contract-ledgers-503503.json": "982b10342b6e5ee23bf8f023023560f72df02762f75261cfe545b1f50300a87b"
+      }
+    }
+  }
+}

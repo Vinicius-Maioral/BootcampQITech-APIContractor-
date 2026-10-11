@@ -40,15 +40,15 @@ class ContractResource:
 
     async def on_get_list(self, request: Request):
         params = request.query_params
-        payload = {k: params.getlist(k) if k == 'status' else params[k] for k in params}
+        payload = dict(params)
         for key in params:
-            if key != 'status' and len(params.getlist(key)) != 1:
+            if len(params.getlist(key)) != 1:
                 raise InvalidSchema(f'Query parameter {key} must not be repeated')
         SchemaHandler.validate_payload(payload, 'get_contracts.json')
         filters = {'client_key': params.get('client_key'), 'external_reference': params.get('external_reference'),
-                   'status_enumerators': params.getlist('status')}
+                   'party_key': params.get('party_key')}
         result = await run_in_threadpool(self._invoke, 'get_list', int(params.get('limit', 10)),
-                                         int(params.get('offset', 0)), filters)
+                                         int(params.get('page', 0)), filters)
         return JSONResponse(result)
 
     async def on_activate(self, contract_key: str, request: Request):
@@ -60,12 +60,12 @@ class ContractResource:
     async def on_split_version(self, contract_key: str, request: Request):
         payload = await self._body(request)
         # Validate outer fields before unpacking; percentage values are normalized by the controller.
-        unknown = set(payload) - {'split', 'actor', 'reason'}
-        if unknown or 'split' not in payload:
-            raise InvalidSchema('Expected split, actor and optional reason')
+        unknown = set(payload) - {'rent_amount_in_cents', 'split', 'actor', 'reason'}
+        if unknown or 'split' not in payload or 'rent_amount_in_cents' not in payload:
+            raise InvalidSchema('Expected rent_amount_in_cents, split, actor and optional reason')
         result = await run_in_threadpool(self._invoke, 'create_split_version', contract_key,
-                                         payload['split'], payload.get('actor'), payload.get('reason'))
-        return JSONResponse(result, status_code=201)
+                                         {k: v for k, v in payload.items() if k not in ('actor', 'reason')}, payload.get('actor'), payload.get('reason'))
+        return JSONResponse(result, status_code=result.pop('_http_status'))
 
     async def on_terminate(self, contract_key: str, request: Request):
         payload = await self._body(request)
