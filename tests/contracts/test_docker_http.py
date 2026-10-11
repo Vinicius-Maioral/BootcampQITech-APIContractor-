@@ -137,7 +137,7 @@ def test_live_ledger_magic_errors(live,rent,status,code):
 
 
 def test_live_activation_timeout_then_official_replay(live):
-    assert live[3]['services']['api']['environment']['LEDGER_API_TIMEOUT']=='1','Use scripts/test-contracts.ps1'
+    assert live[3]['services']['api']['environment']['LEDGER_API_TIMEOUT']=='1','Pytest must prepare the API timeout'
     payload=deepcopy(live[2]);payload['rent_amount_in_cents']=408200
     key=create(live,payload)
     assert_error(post(live,f'/contracts/{key}/activation',{'actor':'first'}),503,'QIT003010')

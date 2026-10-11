@@ -134,10 +134,12 @@ seus tipos e identidades, sem comparar o valor esperado ao cálculo local.
 ## Testes
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-contracts.ps1
+docker compose up
+# Em outro terminal:
+pytest
 ```
 
-O executor configura timeouts de 1 segundo para os atrasos oficiais de 2 segundos
+As fixtures do pytest configuram timeouts de 1 segundo para os atrasos oficiais de 2 segundos
 e restaura a configuração anterior em finally. Os cenários compartilhados são
 reiniciados antes e depois de cada teste. Os headers e bodies são conferidos no
 diário HTTP real do WireMock. PostgreSQL usa schemas temporários isolados.

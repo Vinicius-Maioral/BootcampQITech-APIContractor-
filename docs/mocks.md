@@ -34,15 +34,53 @@ Os timeouts normais continuam 3 segundos para Cadastro e 5 para Ledger.
 Nos testes de falha, ambos devem ser 1 segundo, pois os mappings atrasam 2 segundos.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo-contract.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-contracts.ps1
+docker compose up
+# Em outro terminal, com as dependências de desenvolvimento instaladas:
+pytest
 ```
 
-O executor de testes configura as URLs locais e os timeouts no container da API,
-executa a suíte e restaura os valores anteriores em `finally`. Não recria o banco.
+As fixtures do pytest aguardam os quatro serviços saudáveis, descobrem as portas
+e configuram as URLs locais e os timeouts no container da API. A API é reiniciada
+temporariamente; os valores anteriores são restaurados em `finally`, inclusive
+quando um teste falha. Não é necessário definir `CONTRACT_DOCKER_TESTS` ou
+`CONTRACT_TEST_DATABASE_URL`. O banco não é recriado.
 Usa um bloqueio de arquivo para impedir dois executores de reiniciar os mesmos
 cenários simultaneamente. Os testes HTTP com mocks compartilhados são sequenciais.
+O preparo usa Python e Docker Compose, funcionando no Windows e no Linux. Docker
+indisponível ou serviço que não fica saudável em 120 segundos produz erro claro.
+Coleta e testes unitários não acionam esse preparo. Encerramento forçado do
+processo ou do Docker pode impedir a restauração automática.
+
+## Suíte literal do guia de Contrato
+
+`tests/contracts/test_contract_guide.py` cobre CU-K1 a CU-K12, os dois casos
+de cliente, a recusa do Ledger e o UPDATE do histórico: 16 casos do §9.
+Outros dois casos verificam o ambiente local e o payload do 01b, conforme §12.
+Cada caso prepara seu contrato independentemente, com as chaves oficiais.
+Somente a referência externa recebe um sufixo único para isolar as execuções.
+
+```powershell
+pytest -v -m contract_guide --junitxml=artifacts/contract-guide.xml
+```
+
+O marcador pytest é `contract_guide`. O comando acima apresenta os nomes dos
+casos e grava `artifacts/contract-guide.xml`; `pytest` executa toda a suíte e
+grava `artifacts/contracts-all.xml`. Os relatórios são ignorados pelo Git.
+`scripts/test-contracts.ps1` permanece como atalho opcional; `-GuideOnly` seleciona
+o marcador, sem duplicar a preparação dos containers.
+Pré-requisitos ausentes produzem erro; casos ignorados não comprovam conformidade.
+
+O CU-K9 exige HTTP 201 e `split_version: 2`, com valor inteiro, conforme decisão
+do projeto de adotar o campo retornado pela API. Essa é uma exceção à redação
+literal da tabela do guia, que usa `version: 2`. Não há alias, `xfail` ou resposta
+alternativa aceita pelo teste.
+Os testes existentes continuam como cobertura complementar.
+
+O gatilho de UPDATE é verificado em PostgreSQL com schema descartável; eventos
+locais não são alterados. CU-K5 e CU-K12 consultam os dados persistidos do próprio
+contrato. Os demais casos HTTP criam contratos com referências únicas no banco
+local, sem apagar dados anteriores. A integração com Cadastro e Ledger reais
+do §12 permanece não verificada por esta suíte de mocks.
 
 ## Gatilhos oficiais
 

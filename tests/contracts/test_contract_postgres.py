@@ -1,5 +1,4 @@
 """PostgreSQL checks use a disposable schema; never reset the application's public schema."""
-import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Barrier
@@ -17,10 +16,8 @@ from .test_contract_controller import LedgerMock, RegistryMock, payload, split_b
 
 
 @pytest.fixture
-def pg_factory(monkeypatch):
-    url = os.environ.get('CONTRACT_TEST_DATABASE_URL')
-    if not url:
-        pytest.skip('Set CONTRACT_TEST_DATABASE_URL to run PostgreSQL concurrency/trigger checks')
+def pg_factory(monkeypatch, contract_database_url):
+    url = contract_database_url
     schema = 'contract_test_' + uuid4().hex
     admin = create_engine(url)
     with admin.begin() as connection:

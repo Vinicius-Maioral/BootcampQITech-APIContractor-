@@ -5,23 +5,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
 
 from copy import deepcopy
 import json
-import os
-import subprocess
 from uuid import uuid4
 
 import pytest
 
 from tests.utils.wiremock import WireMock
+from tests.utils.docker_environment import DockerEnvironment
 
 
 @pytest.fixture(scope='session')
-def docker_config():
-    if os.environ.get('CONTRACT_DOCKER_TESTS') != '1':
-        pytest.skip('Run scripts/test-contracts.ps1 for WireMock/Docker integration tests')
-    if os.environ.get('PYTEST_XDIST_WORKER'):
-        pytest.fail('Shared WireMock scenarios require a sequential test run')
-    return json.loads(subprocess.check_output(
-        ['docker', 'compose', 'config', '--format', 'json'], encoding='utf-8'))
+def docker_environment():
+    with DockerEnvironment().prepared() as environment:
+        yield environment
+
+
+@pytest.fixture(scope='session')
+def docker_config(docker_environment):
+    return docker_environment['config']
+
+
+@pytest.fixture(scope='session')
+def contract_database_url(docker_environment):
+    return docker_environment['database_url']
 
 
 @pytest.fixture
@@ -29,11 +34,13 @@ def official_mocks(docker_config):
     mocks = {name: WireMock('http://localhost:' + str(
         docker_config['services'][name + '-mock']['ports'][0]['published']))
         for name in ['party', 'ledger']}
-    for mock in mocks.values():
-        mock.reset()
-    yield mocks
-    for mock in mocks.values():
-        mock.reset()
+    try:
+        for mock in mocks.values():
+            mock.reset()
+        yield mocks
+    finally:
+        for mock in mocks.values():
+            mock.reset()
 
 
 @pytest.fixture

@@ -425,10 +425,13 @@ pasta desfaça tudo. No Windows, a segunda linha é
 pytest
 ```
 
-A API precisa estar respondendo antes. Se você acabou de dar
-`docker compose up`, espere o `(healthy)` aparecer — é o healthcheck do
-`docker-compose.yml` dizendo que a porta já atende. Sem isso, o primeiro
-teste bate numa porta que ainda não responde.
+Inicie `docker compose up` em outro terminal. As fixtures dos testes de contrato
+aguardam os quatro serviços saudáveis e configuram automaticamente a conexão ao
+banco e os mocks, sem variáveis manuais ou script PowerShell. Durante a suíte,
+a API é reiniciada com timeouts de 1 segundo para testar os atrasos dos mocks;
+ao terminar, a configuração anterior é restaurada. O relatório fica em
+`artifacts/contracts-all.xml`. Os cenários compartilhados exigem execução
+sequencial; não execute duas suítes simultaneamente.
 
 O resultado sai assim:
 

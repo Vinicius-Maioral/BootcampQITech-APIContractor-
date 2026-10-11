@@ -53,9 +53,8 @@ services:
     command: uvicorn app:app --host 0.0.0.0 --port 3000 --no-server-header --no-access-log
     healthcheck:
       # "Subiu" nao e a mesma coisa que "ja responde". E esta checagem
-      # que diz quando a API passa a atender de verdade — espere ela
-      # ficar (healthy) antes de rodar o pytest, ou o primeiro teste
-      # bate numa porta que ainda nao responde.
+      # que diz quando a API passa a atender de verdade. As fixtures
+      # do pytest aguardam os servicos saudaveis antes dos testes Docker.
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:3000/health_check\")'"]
       interval: 3s
       timeout: 5s
