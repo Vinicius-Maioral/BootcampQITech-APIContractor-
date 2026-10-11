@@ -1,1 +1,1 @@
-from repositories.sample_entity_repository import SampleEntityRepository
+from repositories.contract_repository import ContractRepository

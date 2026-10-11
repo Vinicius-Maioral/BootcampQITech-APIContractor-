@@ -1,5 +1,8 @@
 # Bootcamp QI Tech — projeto base da API
 
+> A API foi migrada para contratos. Consulte [o fluxo atual, rotas, exemplos e testes](docs/contratos.md).
+> Os exemplos de Sample Entity abaixo são material histórico e suas rotas foram substituídas.
+
 Projeto base do Bootcamp: uma API REST em **Python + FastAPI**, com banco
 **PostgreSQL**, rodando em **Docker**.
 

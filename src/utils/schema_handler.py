@@ -1,8 +1,9 @@
 import functools
 import json
 import os
+from pathlib import Path
 
-from jsonschema import RefResolver, ValidationError, validate
+from jsonschema import FormatChecker, RefResolver, ValidationError, validate
 
 from constants import SCHEMA_PATH
 from errors import InvalidSchema
@@ -74,6 +75,15 @@ class SchemaHandler:
     morar num arquivo à parte: melhor pra quem integra, um pouco pior
     pra quem digita.
     """
+
+    @staticmethod
+    def validate_payload(payload, schema_file_name):
+        schema = SchemaCache.get_schema(schema_file_name)
+        resolver = RefResolver(Path(SCHEMA_PATH).as_uri() + '/', None)
+        try:
+            validate(payload, schema, resolver=resolver, format_checker=FormatChecker())
+        except ValidationError as error:
+            raise InvalidSchema(describe_schema_error(error)) from error
 
     @staticmethod
     def validate(schema_file_name: str):

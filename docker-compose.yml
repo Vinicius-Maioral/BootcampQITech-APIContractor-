@@ -42,6 +42,12 @@ services:
       BANKSLIP_API_URL: ${BANKSLIP_API_URL:-http://localhost:8080}
       BANKSLIP_API_INTERNAL_TOKEN: ${BANKSLIP_API_INTERNAL_TOKEN:-default_token}
       BANKSLIP_API_TIMEOUT: ${BANKSLIP_API_TIMEOUT:-5}
+      REGISTRY_API_URL: ${REGISTRY_API_URL:-http://host.docker.internal:8081}
+      REGISTRY_API_INTERNAL_TOKEN: ${REGISTRY_API_INTERNAL_TOKEN:-default_token}
+      REGISTRY_API_TIMEOUT: ${REGISTRY_API_TIMEOUT:-5}
+      LEDGER_API_URL: ${LEDGER_API_URL:-http://host.docker.internal:8082}
+      LEDGER_API_INTERNAL_TOKEN: ${LEDGER_API_INTERNAL_TOKEN:-default_token}
+      LEDGER_API_TIMEOUT: ${LEDGER_API_TIMEOUT:-5}
     volumes:
       # Monta o codigo pra dentro do container: salvou o arquivo,
       # a API recarrega sozinha (o --reload ali embaixo).

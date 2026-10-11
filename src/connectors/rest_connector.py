@@ -1,10 +1,12 @@
 import json
 import time
+from decimal import Decimal
 from abc import ABCMeta
 
 import requests
 
 from utils.logger import get_logger
+from utils.request_context import get_request_id
 
 
 class RestConnector(metaclass=ABCMeta):
@@ -38,8 +40,8 @@ class RestConnector(metaclass=ABCMeta):
         self.internal_token = internal_token
 
     def send(self, endpoint: str, method: str, payload: dict = None, headers: dict = None):
-        if headers is None:
-            headers = {}
+        headers = dict(headers or {})
+        headers["X-Request-ID"] = get_request_id()
 
         # Os serviços da QI se autenticam entre si do mesmo jeito que
         # esta API exige de quem a chama: o header INTERNAL-TOKEN.
@@ -93,6 +95,6 @@ class BaseConnectorResponse:
         # vez de derrubar a requisição.
         self.json = None
         try:
-            self.json = json.loads(response.content)
+            self.json = json.loads(response.content, parse_float=Decimal)
         except ValueError:
             pass

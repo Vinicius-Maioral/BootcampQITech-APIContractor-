@@ -1,3 +1,9 @@
+# Atualização: fluxo de contratos
+
+O exemplo Sample Entity deste material foi substituído. A referência atual de controller,
+repository, schemas, integrações e testes está em [contratos.md](contratos.md).
+O conteúdo a seguir preserva a explicação histórica da organização do projeto.
+
 # Como o projeto é organizado
 
 Dentro de `src/` tem dez pastas. Para um programa que responde oito

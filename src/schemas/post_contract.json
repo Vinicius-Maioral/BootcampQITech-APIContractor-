@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "client_key": {
+      "$ref": "contract_common.json#/$defs/uuid"
+    },
+    "external_reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "property_reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "end_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "parties": {
+      "type": "array",
+      "items": {
+        "$ref": "contract_common.json#/$defs/party"
+      },
+      "minItems": 3
+    },
+    "split": {
+      "$ref": "contract_common.json#/$defs/split"
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 255
+    }
+  },
+  "required": [
+    "client_key",
+    "external_reference",
+    "property_reference",
+    "start_date",
+    "parties",
+    "split",
+    "actor"
+  ],
+  "additionalProperties": false
+}

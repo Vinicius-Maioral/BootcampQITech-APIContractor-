@@ -27,6 +27,14 @@ BANKSLIP_API_INTERNAL_TOKEN = os.environ.get("BANKSLIP_API_INTERNAL_TOKEN", "def
 # src/connectors/rest_connector.py.
 BANKSLIP_API_TIMEOUT = int(os.environ.get("BANKSLIP_API_TIMEOUT", "5"))
 
+# Provisional integration adapters; configure these addresses for the 01b services/mocks.
+REGISTRY_API_URL = os.environ.get("REGISTRY_API_URL", "http://localhost:8081")
+REGISTRY_API_INTERNAL_TOKEN = os.environ.get("REGISTRY_API_INTERNAL_TOKEN", "default_token")
+REGISTRY_API_TIMEOUT = int(os.environ.get("REGISTRY_API_TIMEOUT", "5"))
+LEDGER_API_URL = os.environ.get("LEDGER_API_URL", "http://localhost:8082")
+LEDGER_API_INTERNAL_TOKEN = os.environ.get("LEDGER_API_INTERNAL_TOKEN", "default_token")
+LEDGER_API_TIMEOUT = int(os.environ.get("LEDGER_API_TIMEOUT", "5"))
+
 # Rotas públicas: não exigem o header INTERNAL-TOKEN. São as duas que
 # precisam responder pra quem ainda não tem token nenhum: a raiz, que
 # diz quem é este serviço, e o health check, que o Docker consulta pra
