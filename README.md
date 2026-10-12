@@ -2,6 +2,8 @@
 
 > A API foi migrada para contratos. Consulte [o fluxo atual, rotas, exemplos e testes](docs/contratos.md).
 > Os exemplos de Sample Entity abaixo são material histórico e suas rotas foram substituídas.
+> A especificação é a RFC do projeto; o que este serviço acrescenta à base está na
+> [seção 9](#9-o-que-a-contract-api-acrescenta).
 
 Para preparar o banco existente e subir API, Cadastro e Ledger simulados no Docker:
 
@@ -712,3 +714,149 @@ mesmo código.
 Este projeto é **MIT** — pode usar, copiar, modificar e levar para o seu
 portfólio, inclusive em trabalho pago. O único pedido é manter o arquivo
 `LICENSE` junto quando você distribuir o código.
+
+---
+
+## 9. O que a contract-api acrescenta
+
+A especificação deste serviço é a RFC do projeto,
+[`rfc-conta-com-proposito.md`](https://github.com/DavidSatAg/bootcamp-qi-tech-docs/blob/main/docs/rfc/rfc-conta-com-proposito.md)
+(seção "Rotas", bloco **Contrato**; o que a implementação fixou está em
+[Acréscimos à base, Contrato](https://github.com/DavidSatAg/bootcamp-qi-tech-docs/blob/main/docs/rfc/rfc-conta-com-proposito.md#contrato)).
+As chamadas ao Cadastro e ao Ledger seguem o
+[01b](https://github.com/DavidSatAg/bootcamp-qi-tech-docs/blob/main/docs/remodelagem/01b-contratos-entre-servicos.md).
+As rotas, os formatos e os erros estão em [docs/contratos.md](docs/contratos.md).
+
+### Acréscimos à base
+
+Cada peça abaixo vem com suas quatro linhas: o princípio da base que ela
+toca, por que não funciona sem ela, por que é a menor possível e o que ela
+não faz.
+
+**Os mocks (`party-mock` e `ledger-mock`, no `docker-compose.yml`).**
+
+1. *Princípio da base tocado:* o compose da base sobe só `api` e `db`.
+2. *Por que não funciona sem:* o Contrato chama o Cadastro e o Ledger por
+   HTTP; sem mock, nenhum teste nem a demonstração rodam sem os três
+   serviços de pé.
+3. *A peça, e por que é a menor:* um container WireMock 3.9.1 por
+   dependência, com os mappings oficiais copiados sem alteração
+   (`tests/mocks/`, hashes em `manifest.json`) — zero código.
+4. *O que ela não faz:* não roda em produção, não guarda estado além dos
+   cenários do WireMock e não substitui o teste ponta a ponta.
+
+**A trava consultiva por contrato (`ContractRepository.advisory_lock()`).**
+
+1. *Princípio da base tocado:* a concorrência se resolve dentro da
+   transação, e a query mora em `repositories/`.
+2. *Por que não funciona sem:* ativação, reajuste e encerramento chamam o
+   Cadastro e o Ledger, e o 01b §0.5 proíbe chamar outro serviço com
+   transação aberta; sem a trava, duas requisições provisionariam ou
+   encerrariam o mesmo contrato ao mesmo tempo.
+3. *A peça, e por que é a menor:* um `pg_advisory_lock` por contrato, numa
+   conexão própria sem pool, com espera de 5 s (passou disso,
+   `503 QIT003010`); um gerenciador de contexto no repository.
+4. *O que ela não faz:* não trava outros contratos nem as leituras, não
+   substitui o `SELECT ... FOR UPDATE` das escritas e, no SQLite dos
+   testes isolados, vale só dentro do processo.
+
+**Várias transações por requisição (`ContractController._transaction`).**
+
+1. *Princípio da base tocado:* uma transação por requisição, com o commit
+   na última linha do controller.
+2. *Por que não funciona sem:* a ativação e o reajuste leem o contrato,
+   chamam o Ledger e só então gravam; com uma transação só, ela ficaria
+   aberta durante o HTTP (01b §0.5).
+3. *A peça, e por que é a menor:* blocos `session.begin()` no próprio
+   controller — leitura antes da chamada, escrita depois —, que continua
+   sendo o único a commitar.
+4. *O que ela não faz:* não desfaz o Ledger; se o commit local falhar
+   depois da confirmação, registra `LEDGER_CONFIRMED_LOCAL_FAILURE` e a
+   recuperação é reenviar o mesmo conteúdo.
+
+**A coluna `contract.platform_fee_percentage`.**
+
+1. *Princípio da base tocado:* o Contrato guarda as chaves do Cadastro, não
+   os dados dele (04 §2).
+2. *Por que não funciona sem:* todo `POST /contract_ledgers` leva a taxa da
+   plataforma, e o Ledger a compara no "mesmo conteúdo" (01b §3); o
+   Contrato só consulta o cliente ao criar e ao ativar (01b §2), então o
+   reajuste precisa da taxa guardada.
+3. *A peça, e por que é a menor:* uma coluna `NUMERIC(7,4)`, nula até a
+   ativação, gravada com o valor lido em `GET /clients/{client_key}`.
+4. *O que ela não faz:* não sai nas respostas, não é item do split e não
+   acompanha uma mudança posterior no Cadastro.
+
+**`SchemaHandler.validate_payload`.**
+
+1. *Princípio da base tocado:* o schema valida pelo decorator, na entrada
+   do resource.
+2. *Por que não funciona sem:* os resources são `async` e leem o corpo e a
+   query eles mesmos, e o controller revalida o corpo já combinado com
+   `actor` e `reason`; nenhum dos dois tem a assinatura que o decorator
+   espera.
+3. *A peça, e por que é a menor:* uma função curta que usa o mesmo
+   cache de schemas, a mesma mensagem e o mesmo `400 QIT000001`.
+4. *O que ela não faz:* não valida regra de negócio nem substitui o
+   decorator, que continua no arquivo.
+
+**`database/prepare.py` e os scripts (`scripts/*.ps1`).**
+
+1. *Princípio da base tocado:* o `database.sql` roda uma vez, quando o
+   banco nasce; mudar o schema pede `down -v`.
+2. *Por que não funciona sem:* o volume local já tinha contratos, e o
+   `down -v` os apagaria.
+3. *A peça, e por que é a menor:* o `start-local.ps1` salva um `pg_dump`
+   e roda o `prepare.py`, que aplica o `database.sql` (idempotente) e o
+   confere contra os models na mesma transação; o `demo-contract.ps1`
+   exercita a API; o `docker-common.ps1` é o auxiliar dos dois.
+4. *O que ela não faz:* não é migration nem versiona schema, não restaura
+   o backup sozinha e só roda no PowerShell.
+
+**`tests/utils/docker_environment.py` e `tests/utils/wiremock.py`.**
+
+1. *Princípio da base tocado:* o teste fala HTTP com a API que está de pé
+   e lê o `.env` sozinho.
+2. *Por que não funciona sem:* os mocks atrasam 2 s, e o teste do timeout
+   precisa da API com 1 s; e o que o Contrato mandou ao Cadastro e ao
+   Ledger só se confere no diário do WireMock.
+3. *A peça, e por que é a menor:* `DockerEnvironment` espera os quatro
+   serviços saudáveis, recria a `api` com timeouts de 1 s e a restaura no
+   fim; `WireMock` é um cliente da API administrativa (`reset`, diário,
+   mappings).
+4. *O que ela não faz:* não sobe o compose (pede `docker compose up`),
+   não simula o WireMock e recusa rodar em paralelo.
+
+**`tests/utils/contract_database.py`.**
+
+1. *Princípio da base tocado:* o teste não fala com o banco, a não ser para
+   zerá-lo.
+2. *Por que não funciona sem:* nenhuma rota prova que o banco recusa
+   `UPDATE`/`DELETE` no histórico, nem que o PostgreSQL responde na porta
+   publicada.
+3. *A peça, e por que é a menor:* o único acesso direto ao banco nos
+   testes contra a API real, com uma conexão e `ROLLBACK` sempre.
+4. *O que ela não faz:* não monta cenário; o resto lê a API
+   (`GET /contracts/{key}`).
+
+**`pytest.ini`.**
+
+1. *Princípio da base tocado:* a base roda o `pytest` sem configuração.
+2. *Por que não funciona sem:* o relatório da suíte precisa sair em
+   `artifacts/contracts-all.xml`, e o marcador `contract_guide` sem
+   registro gera aviso.
+3. *A peça, e por que é a menor:* duas chaves: `addopts` com o
+   `--junitxml` e `markers`.
+4. *O que ela não faz:* não escolhe pastas, não muda timeouts nem filtra
+   testes.
+
+**`logger.reconfigure` (`setup_logging`, em `src/utils/logger.py`).**
+
+1. *Princípio da base tocado:* o `setup_logging` da base só liga o handler
+   e o filtro.
+2. *Por que não funciona sem:* o log pode levar texto com acento; num
+   console que não é UTF-8 (Windows, fora do container), um acento
+   derruba a escrita da linha.
+3. *A peça, e por que é a menor:* duas chamadas a `reconfigure(encoding=
+   'utf-8')`, só quando o stream as tem.
+4. *O que ela não faz:* não muda o formato, o nível nem o filtro do log.
