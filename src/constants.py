@@ -14,20 +14,7 @@ SERVICE_NAME = os.environ.get("SERVICE_NAME", "bootcamp-api")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 INTERNAL_TOKEN = os.environ.get("INTERNAL_TOKEN")
 
-# A API de boletos: o serviço de fora que este projeto chama pra emitir
-# uma cobrança (veja src/connectors/). O endereço vem do ambiente, como
-# tudo aqui — na sua máquina ele aponta pro mock server do sábado 4; em
-# produção, apontaria pro serviço de verdade. O código não sabe a
-# diferença, e esse é o ponto.
-BANKSLIP_API_URL = os.environ.get("BANKSLIP_API_URL", "http://localhost:8080")
-BANKSLIP_API_INTERNAL_TOKEN = os.environ.get("BANKSLIP_API_INTERNAL_TOKEN", "default_token")
-
-# Quantos segundos esperar pelo serviço de boletos antes de desistir.
-# Todo connector TEM um timeout — o porquê está em
-# src/connectors/rest_connector.py.
-BANKSLIP_API_TIMEOUT = int(os.environ.get("BANKSLIP_API_TIMEOUT", "5"))
-
-# 01b: use localhost outside Docker; Compose supplies host.docker.internal URLs.
+# 01b: use localhost outside Docker; Compose supplies internal service URLs.
 PARTY_API_URL = os.environ.get("PARTY_API_URL", "http://localhost:3001")
 PARTY_API_INTERNAL_TOKEN = os.environ.get("PARTY_API_INTERNAL_TOKEN", "default_token")
 PARTY_API_TIMEOUT = int(os.environ.get("PARTY_API_TIMEOUT", "3"))

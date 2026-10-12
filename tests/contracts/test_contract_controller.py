@@ -123,7 +123,7 @@ def assert_error(code, call):
         'QIT003001': 404, 'QIT003002': 409, 'QIT003003': 409, 'QIT003004': 422,
         'QIT003005': 422, 'QIT003006': 422, 'QIT003007': 409, 'QIT003008': 422,
         'QIT003009': 422, 'QIT003010': 503, 'QIT003011': 422, 'QIT003012': 422,
-        'QIT003013': 409, 'QIT003014': 422, 'QIT003015': 409, 'QIT000001': 400,
+        'QIT003013': 409, 'QIT000001': 400,
         'QIT000010': 400, 'QIT000500': 500,
     }
     assert qi_exception_to_response(error.value).status_code == expected_statuses[code]

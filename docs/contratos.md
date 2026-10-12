@@ -73,7 +73,7 @@ recuperar a chave depois de um timeout no POST. offset e status n?o s?o filtros 
 Cadastro: GET /clients/{client_key} na cria??o e ativa??o; GET /parties/{party_key}
 para cada participa??o apenas na ativa??o. Cliente ou parte inexistente gera
 422 QIT003008; status diferente de active gera 409 QIT003007. Timeout/5xx gera
-503 QIT003010. Os antigos QIT003014/15 n?o s?o emitidos nesses fluxos.
+503 QIT003010.
 
 Ledger: POST /contract_ledgers recebe contract_key, client_key, client_party_key,
 split_version, rent_amount_in_cents, platform_fee_percentage, items, actor e reason.

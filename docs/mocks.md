@@ -66,8 +66,6 @@ pytest -v -m contract_guide --junitxml=artifacts/contract-guide.xml
 O marcador pytest é `contract_guide`. O comando acima apresenta os nomes dos
 casos e grava `artifacts/contract-guide.xml`; `pytest` executa toda a suíte e
 grava `artifacts/contracts-all.xml`. Os relatórios são ignorados pelo Git.
-`scripts/test-contracts.ps1` permanece como atalho opcional; `-GuideOnly` seleciona
-o marcador, sem duplicar a preparação dos containers.
 Pré-requisitos ausentes produzem erro; casos ignorados não comprovam conformidade.
 
 O CU-K9 exige HTTP 201 e `split_version: 2`, com valor inteiro, conforme decisão
