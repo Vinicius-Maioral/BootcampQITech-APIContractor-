@@ -58,7 +58,8 @@ class ContractController(BaseController):
             if str(parsed) != key or parsed.version != 4:
                 raise ValueError()
         except (ValueError, TypeError, AttributeError):
-            raise InvalidParameter('contract_key must be a canonical UUID v4')
+            # RFC v2 only foresees 200/404 for a contract key: a malformed key names no contract.
+            raise ContractNotFound(key)
 
     def _require_contract(self, key, lock=False):
         self._check_key(key)

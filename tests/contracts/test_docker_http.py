@@ -162,6 +162,12 @@ def test_live_closure_failure_preserves_state(live,reason,status,code):
 
 def test_live_pending_split_replay(live):
     key=create(live);activate(live,key)
+@pytest.mark.parametrize('key',['not-a-uuid','00000000-0000-0000-0000-000000000001'])
+def test_live_malformed_contract_key_is_not_found(live,key):
+    base,headers,_,_,_=live
+    assert_error(requests.get(base+'/contracts/'+key,headers=headers,timeout=10),404,'QIT003001')
+
+
     data={'actor':'first','rent_amount_in_cents':408200,'split':live[2]['split']}
     assert_error(post(live,f'/contracts/{key}/split_versions',data),503,'QIT003010')
     assert state(live,key)['split_version']==1
