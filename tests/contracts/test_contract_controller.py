@@ -157,7 +157,7 @@ def test_complete_lifecycle(controller, payload):
     data = split_body(payload)
     data['split'][1]['value'] = '12.0000'
     version = controller.create_split_version(key, data, 'editor')
-    assert version['split_version'] == 2 and version['_http_status'] == 201
+    assert version['split_version'] == 2 and version['replayed'] is False
     active = controller.get_by_key(key)
     assert active['split_version'] == 2 and active['provisioned_at'].endswith('Z')
     assert next(i for i in active['split'] if i['purpose_code'] == 'OWN')['value'] == '12.0000'
@@ -408,7 +408,7 @@ def test_pending_split_replay_and_current_version(controller, payload):
     next(i for i in data['split'] if i['purpose_code'] == 'OWN')['value'] = '10'
     controller.registry.client_response.json['platform_fee_percentage'] = '99'
     response = controller.create_split_version(key, data, 'second-attempt', 'another reason')
-    assert response['split_version'] == 2 and response['_http_status'] == 200
+    assert response['split_version'] == 2 and response['replayed'] is True
     assert controller.get_by_key(key)['split_version'] == 2
     assert controller._snapshot(key)['split_versions'][-1]['actor'] == 'first-attempt'
     assert controller.ledger.calls[-1][1]['platform_fee_percentage'] == '2.5000'
@@ -468,7 +468,7 @@ def test_pending_version_after_remote_success_and_timeout(controller,payload):
     assert controller.get_by_key(key)['split_version']==1
     controller.ledger.provision_contract_ledger=original
     result=controller.create_split_version(key,data,'retry')
-    assert result['_http_status']==200 and result['split_version']==2
+    assert result['replayed'] is True and result['split_version']==2
     assert len(controller.ledger.operations)==2
 
 
@@ -487,7 +487,7 @@ def test_new_version_confirmed_then_commit_failure(controller,payload,caplog):
     assert controller.get_by_key(key)['split_version']==1
     assert len(controller._snapshot(key)['split_versions'])==2
     assert 'LEDGER_CONFIRMED_LOCAL_FAILURE' in caplog.text
-    assert controller.create_split_version(key,split_body(payload),'retry')['_http_status']==200
+    assert controller.create_split_version(key,split_body(payload),'retry')['replayed'] is True
     assert len(controller.ledger.operations)==2
 
 

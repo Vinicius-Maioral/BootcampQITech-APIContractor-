@@ -75,6 +75,7 @@ def test_live_lifecycle_headers_bodies_and_idempotent_activation(live):
     # Official mappings keep expected_amount=640000 even when the rent changes.
     version=post(live,f'/contracts/{key}/split_versions',{'actor':'docker-test','rent_amount_in_cents':530000,'split':payload['split']})
     assert version.status_code==201 and version.json()['split_version']==2,version.text
+    assert version.json()['version']==2,version.text
     assert state(live,key)['rent_amount_in_cents']==530000
     closed=post(live,f'/contracts/{key}/termination',{'actor':'docker-test','reason':'ordinary closure'})
     assert closed.status_code==200
@@ -161,14 +162,14 @@ def test_live_closure_failure_preserves_state(live,reason,status,code):
     assert post(live,f'/contracts/{key}/termination',{'actor':'retry'}).status_code==200
 
 
-def test_live_pending_split_replay(live):
-    key=create(live);activate(live,key)
 @pytest.mark.parametrize('key',['not-a-uuid','00000000-0000-0000-0000-000000000001'])
 def test_live_malformed_contract_key_is_not_found(live,key):
     base,headers,_,_,_=live
     assert_error(requests.get(base+'/contracts/'+key,headers=headers,timeout=10),404,'QIT003001')
 
 
+def test_live_pending_split_replay(live):
+    key=create(live);activate(live,key)
     data={'actor':'first','rent_amount_in_cents':408200,'split':live[2]['split']}
     assert_error(post(live,f'/contracts/{key}/split_versions',data),503,'QIT003010')
     assert state(live,key)['split_version']==1
@@ -179,4 +180,5 @@ def test_live_malformed_contract_key_is_not_found(live,key):
     data['actor']='retry';data['split']=list(reversed(data['split']))
     replay=post(live,f'/contracts/{key}/split_versions',data)
     assert replay.status_code==200 and replay.json()['split_version']==2,replay.text
+    assert replay.json()['version']==2,replay.text
     assert state(live,key)['split_version']==2

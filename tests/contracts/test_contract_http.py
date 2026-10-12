@@ -60,7 +60,7 @@ def test_http_lifecycle_and_error_contract(controller, payload, monkeypatch):
     assert request(app, 'POST', f'/contracts/{key}/activation', audit)[0] == 200
     status, body = request(app, 'POST', f'/contracts/{key}/split_versions',
                            json.dumps({**split_body(payload), 'actor': 'http-test'}).encode())
-    assert status == 201 and body['split_version'] == 2
+    assert status == 201 and body['split_version'] == 2 and 'replayed' not in body
     assert request(app, 'POST', f'/contracts/{key}/termination', audit)[0] == 200
     status, body = request(app, 'POST', f'/contracts/{key}/activation', audit)
     assert (status, body['code']) == (409, 'QIT003003')
@@ -112,7 +112,7 @@ def test_http_pending_replay_and_active_replay(controller,payload,monkeypatch):
     failure['response']=None
     status,body=request(app,'POST',f'/contracts/{key}/split_versions',json.dumps(data).encode())
     assert status==200 and body['split_version']==2 and body['ledger_accounts']
-    assert '_http_status' not in body
+    assert '_http_status' not in body and 'replayed' not in body
 
 
 @pytest.mark.parametrize('roles', [[], ['tenant'], ['landlord', 'administrator'],

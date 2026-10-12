@@ -176,7 +176,8 @@ class ContractController(BaseController):
                 split = next(s for s in contract.split_versions if s.version == version)
                 if split.provisioned_at is None:
                     split.provisioned_at = datetime.now(timezone.utc)
-            return {'contract_key': contract_key, 'status': ContractStatus.ACTIVE, 'split_version': version, 'ledger_accounts': accounts, '_http_status': 200 if replay else 201}
+            # RFC v2 answers with `version`; `split_version` is kept for existing clients.
+            return {'contract_key': contract_key, 'status': ContractStatus.ACTIVE, 'version': version, 'split_version': version, 'ledger_accounts': accounts, 'replayed': replay}
 
     def terminate(self, contract_key: str, actor: str, reason=None) -> dict:
         self._validate_audit(actor, reason)

@@ -67,7 +67,8 @@ class ContractResource:
             raise InvalidSchema('Expected rent_amount_in_cents, split, actor and optional reason')
         result = await run_in_threadpool(self._invoke, 'create_split_version', contract_key,
                                          {k: v for k, v in payload.items() if k not in ('actor', 'reason')}, payload.get('actor'), payload.get('reason'))
-        return JSONResponse(result, status_code=result.pop('_http_status'))
+        # A pending version re-sent is a replay (200); a new version is created (201).
+        return JSONResponse(result, status_code=200 if result.pop('replayed') else 201)
 
     async def on_terminate(self, contract_key: str, request: Request):
         payload = await self._body(request)
