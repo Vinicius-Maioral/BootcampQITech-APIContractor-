@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION append_only_guard() RETURNS TRIGGER AS $func$
 BEGIN
-    RAISE EXCEPTION '% e append-only', TG_TABLE_NAME;
+    RAISE EXCEPTION USING MESSAGE = TG_TABLE_NAME || ' e append-only';
 END;
 $func$ LANGUAGE plpgsql;
 
