@@ -10,7 +10,12 @@ import controllers.contract_controller as controller_module
 import database
 from app import create_app
 from resources.contract import ContractResource
-from .test_contract_controller import RegistryMock, LedgerMock, controller, payload, split_body
+from . import test_contract_controller as unit
+from .test_contract_controller import RegistryMock, LedgerMock, split_body
+
+# Fixtures shared with the unit module; assigning them lets pytest find them here.
+controller = unit.controller
+payload = unit.payload
 
 
 def request(app, method, path, body=None, token=True, query=b''):
@@ -18,12 +23,14 @@ def request(app, method, path, body=None, token=True, query=b''):
     async def run():
         messages = []
         delivered = False
+
         async def receive():
             nonlocal delivered
             if not delivered:
                 delivered = True
                 return {'type': 'http.request', 'body': body or b'', 'more_body': False}
             await asyncio.Event().wait()
+
         async def send(message):
             messages.append(message)
         headers = [(b'content-type', b'application/json'), (b'x-request-id', b'http-contract-test')]
@@ -89,34 +96,35 @@ def test_list_invalid_filters(controller, query):
     assert status == 400 and body['code'] == 'QIT000001'
 
 
-def test_http_pending_replay_and_active_replay(controller,payload,monkeypatch):
+def test_http_pending_replay_and_active_replay(controller, payload, monkeypatch):
     from types import SimpleNamespace
-    failure = {'response':None}
+    failure = {'response': None}
+
     def ledger_factory():
         ledger = LedgerMock(database.get_context().db_session)
         ledger.response = failure['response']
         return ledger
-    monkeypatch.setattr(controller_module,'RegistryConnector',lambda:RegistryMock(database.get_context().db_session,payload['parties'][2]['party_key']))
-    monkeypatch.setattr(controller_module,'LedgerConnector',ledger_factory)
-    app=create_app()
-    _,body=request(app,'POST','/contracts',json.dumps({**payload,'actor':'test'}).encode())
-    key=body['contract_key']
-    assert request(app,'POST',f'/contracts/{key}/activation',b'{"actor":"test"}')[0]==200
-    failure['response']=SimpleNamespace(status=503,json={})
-    status,replay=request(app,'POST',f'/contracts/{key}/activation',b'{"actor":"test"}')
-    assert status==200 and 'ledger_accounts' not in replay
-    data={**split_body(payload),'actor':'test'}
-    status,body=request(app,'POST',f'/contracts/{key}/split_versions',json.dumps(data).encode())
-    assert status==503 and body['code']=='QIT003010'
-    assert request(app,'GET',f'/contracts/{key}')[1]['split_version']==1
-    failure['response']=None
-    status,body=request(app,'POST',f'/contracts/{key}/split_versions',json.dumps(data).encode())
-    assert status==200 and body['split_version']==2 and body['ledger_accounts']
+    monkeypatch.setattr(controller_module, 'RegistryConnector', lambda: RegistryMock(database.get_context().db_session, payload['parties'][2]['party_key']))
+    monkeypatch.setattr(controller_module, 'LedgerConnector', ledger_factory)
+    app = create_app()
+    _, body = request(app, 'POST', '/contracts', json.dumps({**payload, 'actor': 'test'}).encode())
+    key = body['contract_key']
+    assert request(app, 'POST', f'/contracts/{key}/activation', b'{"actor":"test"}')[0] == 200
+    failure['response'] = SimpleNamespace(status=503, json={})
+    status, replay = request(app, 'POST', f'/contracts/{key}/activation', b'{"actor":"test"}')
+    assert status == 200 and 'ledger_accounts' not in replay
+    data = {**split_body(payload), 'actor': 'test'}
+    status, body = request(app, 'POST', f'/contracts/{key}/split_versions', json.dumps(data).encode())
+    assert status == 503 and body['code'] == 'QIT003010'
+    assert request(app, 'GET', f'/contracts/{key}')[1]['split_version'] == 1
+    failure['response'] = None
+    status, body = request(app, 'POST', f'/contracts/{key}/split_versions', json.dumps(data).encode())
+    assert status == 200 and body['split_version'] == 2 and body['ledger_accounts']
     assert '_http_status' not in body and 'replayed' not in body
 
 
 @pytest.mark.parametrize('roles', [[], ['tenant'], ['landlord', 'administrator'],
-                                 ['tenant', 'administrator'], ['tenant', 'landlord']])
+                                   ['tenant', 'administrator'], ['tenant', 'landlord']])
 def test_http_insufficient_parties_is_business_error(controller, payload, monkeypatch, roles):
     registry_calls = []
 

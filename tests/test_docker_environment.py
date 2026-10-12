@@ -21,6 +21,7 @@ def fake_environment(tmp_path, monkeypatch):
     monkeypatch.setattr(docker, 'wait_healthy', lambda service: containers[service])
     monkeypatch.setattr(docker, 'run', lambda *args, **kwargs: '{"services":{"api":{},"db":{},"party-mock":{},"ledger-mock":{}}}')
     calls = []
+
     def recreate(settings):
         calls.append(deepcopy(settings))
         return container(3000, {**original, **settings})
@@ -42,6 +43,7 @@ def test_preparation_uses_host_database_and_restores_after_test_failure(tmp_path
 
 def test_partial_preparation_failure_still_restores(tmp_path, monkeypatch):
     docker, original, calls = fake_environment(tmp_path, monkeypatch)
+
     def recreate(settings):
         calls.append(dict(settings))
         if len(calls) == 1:

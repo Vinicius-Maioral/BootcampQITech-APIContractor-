@@ -92,10 +92,10 @@ def payload():
     }
 
 
-
 @pytest.fixture
 def controller(monkeypatch, payload):
     engine = create_engine('sqlite://', poolclass=StaticPool, connect_args={'check_same_thread': False})
+
     @event.listens_for(engine, 'connect')
     def foreign_keys(connection, record):
         connection.execute('PRAGMA foreign_keys=ON')
@@ -345,8 +345,8 @@ def test_party_failures(controller, payload, status, body, code):
 
 
 @pytest.mark.parametrize('status,body,code', [
-    (422, {'code': c}, 'QIT003009') for c in ['QIT001008','QIT001028','QIT001034']
-] + [(409, {'code': c}, 'QIT003013') for c in ['QIT001032','QIT001033']] + [
+    (422, {'code': c}, 'QIT003009') for c in ['QIT001008', 'QIT001028', 'QIT001034']
+] + [(409, {'code': c}, 'QIT003013') for c in ['QIT001032', 'QIT001033']] + [
     (503, None, 'QIT003010'), (201, {}, 'QIT003010'),
     (400, {'code': 'QIT000001'}, 'QIT000500'), (422, {'code': 'UNKNOWN'}, 'QIT000500'),
 ])
@@ -373,6 +373,7 @@ def test_timeout_result_unknown(controller, payload):
 
 def test_confirmed_ledger_commit_failure_retry(controller, payload, caplog):
     key = create(controller, payload)
+
     def fail_commit(session):
         if controller._confirmed_operation:
             raise RuntimeError('simulated commit failure')
@@ -415,9 +416,9 @@ def test_pending_split_replay_and_current_version(controller, payload):
 
 
 @pytest.mark.parametrize('status,body,expected', [
-    (200, {}, None), (404, {'code':'QIT001035'}, None),
-    (409, {'code':'QIT001037'}, 'QIT003013'),
-    (409, {'code':'QIT001011'}, 'QIT003010'), (503, {}, 'QIT003010'),
+    (200, {}, None), (404, {'code': 'QIT001035'}, None),
+    (409, {'code': 'QIT001037'}, 'QIT003013'),
+    (409, {'code': 'QIT001011'}, 'QIT003010'), (503, {}, 'QIT003010'),
 ])
 @pytest.mark.parametrize('active', [False, True])
 def test_closure_translation(controller, payload, status, body, expected, active):
@@ -446,7 +447,7 @@ def test_list_roles_and_natural_key(controller, payload):
     assert len(result['contracts']) == 1
     assert result['contracts'][0]['roles'] == ['provider', 'tenant']
     assert controller.get_list(10, 1, filters)['contracts'] == []
-    result = controller.get_list(10, 0, {'client_key':payload['client_key'], 'external_reference':payload['external_reference']})
+    result = controller.get_list(10, 0, {'client_key': payload['client_key'], 'external_reference': payload['external_reference']})
     assert [c['contract_key'] for c in result['contracts']] == [key]
 
 
@@ -454,47 +455,49 @@ def test_codes_unique():
     error_verification()
 
 
-def test_pending_version_after_remote_success_and_timeout(controller,payload):
-    key=create(controller,payload)
-    controller.activate(key,'test')
-    original=controller.ledger.provision_contract_ledger
+def test_pending_version_after_remote_success_and_timeout(controller, payload):
+    key = create(controller, payload)
+    controller.activate(key, 'test')
+    original = controller.ledger.provision_contract_ledger
+
     def confirmed_then_timeout(data):
         original(data)
         raise Timeout('response lost after remote commit')
-    controller.ledger.provision_contract_ledger=confirmed_then_timeout
-    data=split_body(payload)
-    assert_error('QIT003010',lambda:controller.create_split_version(key,data,'first'))
-    assert len(controller.ledger.operations)==2
-    assert controller.get_by_key(key)['split_version']==1
-    controller.ledger.provision_contract_ledger=original
-    result=controller.create_split_version(key,data,'retry')
-    assert result['replayed'] is True and result['split_version']==2
-    assert len(controller.ledger.operations)==2
+    controller.ledger.provision_contract_ledger = confirmed_then_timeout
+    data = split_body(payload)
+    assert_error('QIT003010', lambda: controller.create_split_version(key, data, 'first'))
+    assert len(controller.ledger.operations) == 2
+    assert controller.get_by_key(key)['split_version'] == 1
+    controller.ledger.provision_contract_ledger = original
+    result = controller.create_split_version(key, data, 'retry')
+    assert result['replayed'] is True and result['split_version'] == 2
+    assert len(controller.ledger.operations) == 2
 
 
-def test_new_version_confirmed_then_commit_failure(controller,payload,caplog):
-    key=create(controller,payload)
-    controller.activate(key,'test')
+def test_new_version_confirmed_then_commit_failure(controller, payload, caplog):
+    key = create(controller, payload)
+    controller.activate(key, 'test')
+
     def fail_commit(session):
         if controller._confirmed_operation:
             raise RuntimeError('local confirmation commit failed')
-    event.listen(controller.session,'before_commit',fail_commit)
+    event.listen(controller.session, 'before_commit', fail_commit)
     try:
         with pytest.raises(RuntimeError):
-            controller.create_split_version(key,split_body(payload),'first')
+            controller.create_split_version(key, split_body(payload), 'first')
     finally:
-        event.remove(controller.session,'before_commit',fail_commit)
-    assert controller.get_by_key(key)['split_version']==1
-    assert len(controller._snapshot(key)['split_versions'])==2
+        event.remove(controller.session, 'before_commit', fail_commit)
+    assert controller.get_by_key(key)['split_version'] == 1
+    assert len(controller._snapshot(key)['split_versions']) == 2
     assert 'LEDGER_CONFIRMED_LOCAL_FAILURE' in caplog.text
-    assert controller.create_split_version(key,split_body(payload),'retry')['replayed'] is True
-    assert len(controller.ledger.operations)==2
+    assert controller.create_split_version(key, split_body(payload), 'retry')['replayed'] is True
+    assert len(controller.ledger.operations) == 2
 
 
-@pytest.mark.parametrize('fee',['2e-1','2.00001',2.5,True])
-def test_invalid_registry_percentage(controller,payload,fee):
-    controller.registry.client_response.json['platform_fee_percentage']=fee
-    assert_error('QIT003010',lambda:create(controller,payload))
+@pytest.mark.parametrize('fee', ['2e-1', '2.00001', 2.5, True])
+def test_invalid_registry_percentage(controller, payload, fee):
+    controller.registry.client_response.json['platform_fee_percentage'] = fee
+    assert_error('QIT003010', lambda: create(controller, payload))
 
 
 def test_fixed_ledger_expected_amount_is_accepted(controller, payload):

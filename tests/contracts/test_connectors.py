@@ -8,6 +8,7 @@ from utils.request_context import set_request_id
 
 def test_connectors_send_configured_requests_and_preserve_decimals(monkeypatch):
     calls = []
+
     def send(method, url, **kwargs):
         calls.append((method, url, kwargs))
         return SimpleNamespace(status_code=200, content=b'{"platform_fee_percentage":2.1234}')
@@ -20,7 +21,7 @@ def test_connectors_send_configured_requests_and_preserve_decimals(monkeypatch):
         registry.get_party('party-key')
         ledger = LedgerConnector()
         ledger.provision_contract_ledger({'split_version': 1})
-        ledger.close_contract_ledger('contract/key', {'actor':'contract-api'})
+        ledger.close_contract_ledger('contract/key', {'actor': 'contract-api'})
         assert calls[0][1] == registry.base_url + '/clients/client-key'
         assert calls[1][1] == registry.base_url + '/parties/party-key'
         assert calls[2][0] == 'POST'

@@ -11,11 +11,9 @@ from uuid import uuid4
 
 import pytest
 import requests
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import DBAPIError
 
+from tests.utils.contract_database import ContractDatabase
 from tests.utils.wiremock import WireMock
-from .test_contract_postgres import pg_factory
 
 
 pytestmark = pytest.mark.contract_guide
@@ -34,13 +32,12 @@ def guide_prerequisites(docker_environment):
 
 @pytest.fixture(scope='session')
 def guide_db(guide_prerequisites, contract_database_url):
-    engine = create_engine(contract_database_url)
+    database = ContractDatabase(contract_database_url)
     try:
-        with engine.connect() as connection:
-            assert connection.execute(text('SELECT 1')).scalar_one() == 1
-        yield engine
+        assert database.ping() == 1
+        yield database
     finally:
-        engine.dispose()
+        database.dispose()
 
 
 @pytest.fixture
@@ -104,16 +101,8 @@ def state(api, key):
     return response.json()
 
 
-def persisted_events(engine, key):
-    with engine.connect() as connection:
-        return connection.execute(text('''
-            SELECT old.enumerator AS from_status, new.enumerator AS to_status, e.trace_id
-            FROM contract_status_event e
-            JOIN contract c ON c.id=e.contract_id
-            LEFT JOIN contract_status old ON old.id=e.from_status_id
-            JOIN contract_status new ON new.id=e.to_status_id
-            WHERE c.contract_key=:key ORDER BY e.event_datetime, e.id
-        '''), {'key': key}).mappings().all()
+def persisted_events(api, key):
+    return state(api, key)['status_events']
 
 
 def test_CU_K1_create_201_draft(guide_api):
@@ -144,20 +133,17 @@ def test_client_failure(guide_api, client, status, code):
     error(post(guide_api, '/contracts', guide_api['payload']), status, code)
 
 
-def test_CU_K5_activate_200_active_event_and_provisioned_at(guide_api, guide_db):
+def test_CU_K5_activate_200_active_event_and_provisioned_at(guide_api):
     key = create(guide_api)
+    assert state(guide_api, key)['provisioned_at'] is None
     activate(guide_api, key)
     active = state(guide_api, key)
     assert active['status'] == 'active'
+    # GET shows the current split: after activation, version 1 with its provisioned_at.
+    assert active['split_version'] == 1
     assert active['provisioned_at'] is not None
-    events = persisted_events(guide_db, key)
+    events = persisted_events(guide_api, key)
     assert [(e['from_status'], e['to_status']) for e in events] == [(None, 'draft'), ('draft', 'active')]
-    with guide_db.connect() as connection:
-        provisioned = connection.execute(text('''
-            SELECT s.provisioned_at FROM split_version s JOIN contract c ON c.id=s.contract_id
-            WHERE c.contract_key=:key AND s.version=1
-        '''), {'key': key}).scalar_one()
-    assert provisioned is not None
 
 
 def test_CU_K6_pending_provider_no_ledger_call(guide_api):
@@ -232,36 +218,28 @@ def test_CU_K11_terminate_200_terminated(guide_api):
     assert state(guide_api, key)['status'] == 'terminated'
 
 
-def test_CU_K12_exact_trace_id_in_event_and_ledger_header(guide_api, guide_db):
+def test_CU_K12_exact_trace_id_in_event_and_ledger_header(guide_api):
     key = create(guide_api)
     guide_api['headers']['X-Request-ID'] = 'teste-k12'
     activate(guide_api, key)
-    activation = [e for e in persisted_events(guide_db, key) if e['to_status'] == 'active']
+    guide_api['headers']['X-Request-ID'] = 'teste-k12-leitura'
+    activation = [e for e in persisted_events(guide_api, key) if e['to_status'] == 'active']
     assert len(activation) == 1 and activation[0]['trace_id'] == 'teste-k12'
     calls = guide_api['mocks']['ledger'].journal()
     assert len(calls) == 1 and calls[0]['url'] == '/contract_ledgers'
     assert WireMock.header(calls[0], 'X-Request-ID') == 'teste-k12'
 
 
-def test_update_contract_status_event_raises_trigger_exception(pg_factory):
-    # All writes, including the attempted UPDATE, target a disposable PG schema.
-    engine = pg_factory.kw['bind']
-    with engine.begin() as connection:
-        contract_id = connection.execute(text('''
-            INSERT INTO contract (contract_key,client_key,contract_status_id,external_reference,property_reference,start_date)
-            VALUES (:key,:client,(SELECT id FROM contract_status WHERE enumerator='draft'),'GUIDE-TRIGGER','APT-101','2026-09-01')
-            RETURNING id
-        '''), {'key': str(uuid4()), 'client': CLIENT}).scalar_one()
-        event_id = connection.execute(text('''
-            INSERT INTO contract_status_event (contract_id,to_status_id,actor,trace_id,event_datetime)
-            VALUES (:contract,(SELECT id FROM contract_status WHERE enumerator='draft'),'erp-alfa','guide-trigger',NOW())
-            RETURNING id
-        '''), {'contract': contract_id}).scalar_one()
-    with pytest.raises(DBAPIError, match='contract_status_event.*append-only'):
-        with engine.begin() as connection:
-            connection.execute(text("UPDATE contract_status_event SET actor='modified' WHERE id=:id"), {'id': event_id})
-    with engine.connect() as connection:
-        assert connection.execute(text('SELECT actor FROM contract_status_event WHERE id=:id'), {'id': event_id}).scalar_one() == 'erp-alfa'
+@pytest.mark.parametrize('statement', [
+    "UPDATE contract_status_event SET actor='modified'", 'DELETE FROM contract_status_event',
+], ids=['update', 'delete'])
+def test_contract_status_event_is_append_only(guide_api, guide_db, statement):
+    key = create(guide_api)
+    before = state(guide_api, key)['status_events']
+    assert len(before) == 1
+    refusal = guide_db.refused_event_change(key, statement)
+    assert refusal is not None and 'contract_status_event' in refusal and 'append-only' in refusal, refusal
+    assert state(guide_api, key)['status_events'] == before
 
 
 def test_section_12_local_environment(guide_api, guide_db):
@@ -274,8 +252,7 @@ def test_section_12_local_environment(guide_api, guide_db):
         inspected = json.loads(subprocess.check_output(['docker', 'inspect', container], encoding='utf-8'))[0]
         assert inspected['State']['Health']['Status'] == 'healthy', service
     assert requests.get(guide_api['base'] + '/health_check', timeout=10).status_code == 204
-    with guide_db.connect() as connection:
-        assert connection.execute(text('SELECT 1')).scalar_one() == 1
+    assert guide_db.ping() == 1
 
 
 def test_section_12_provisioning_payload_matches_01b(guide_api):

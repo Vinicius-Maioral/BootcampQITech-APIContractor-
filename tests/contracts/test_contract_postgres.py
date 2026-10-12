@@ -12,7 +12,11 @@ from sqlalchemy.orm import sessionmaker
 import database
 from controllers import ContractController
 from errors import QIException
-from .test_contract_controller import LedgerMock, RegistryMock, payload, split_body
+from . import test_contract_controller as unit
+from .test_contract_controller import LedgerMock, RegistryMock, split_body
+
+# Fixture shared with the unit module; assigning it lets pytest find it here.
+payload = unit.payload
 
 
 @pytest.fixture
@@ -69,9 +73,11 @@ def setup_contract(payload, active=False):
 
 def test_concurrent_duplicate_reference(pg_factory, payload):
     barrier = Barrier(2)
+
     def worker():
         controller = build_controller(payload)
         original = controller.repository.get_by_external_reference
+
         def simultaneous_lookup(*args):
             result = original(*args)
             barrier.wait(timeout=10)
@@ -92,6 +98,7 @@ def test_concurrent_duplicate_reference(pg_factory, payload):
 def test_concurrent_split_versions(pg_factory, payload):
     key, ledger = setup_contract(payload, active=True)
     barrier = Barrier(2)
+
     def worker():
         controller = build_controller(payload, ledger)
         try:
@@ -108,6 +115,7 @@ def test_concurrent_split_versions(pg_factory, payload):
 def test_concurrent_activation(pg_factory, payload):
     key, ledger = setup_contract(payload)
     barrier = Barrier(2)
+
     def worker():
         controller = build_controller(payload, ledger)
         barrier.wait(timeout=10)
@@ -126,6 +134,7 @@ def test_concurrent_activation(pg_factory, payload):
 def test_version_racing_closure(pg_factory, payload):
     key, ledger = setup_contract(payload, active=True)
     barrier = Barrier(2)
+
     def worker(operation):
         controller = build_controller(payload, ledger)
         try:
@@ -197,17 +206,17 @@ def test_schema_verifier_rejects_incompatible_table(pg_factory):
         module.verify(connection)
 
 
-def test_advisory_lock_released_after_dependency_failure(pg_factory,payload):
+def test_advisory_lock_released_after_dependency_failure(pg_factory, payload):
     from requests.exceptions import Timeout
-    key,_=setup_contract(payload)
-    controller=build_controller(payload)
+    key, _ = setup_contract(payload)
+    controller = build_controller(payload)
     try:
-        controller.ledger.exception=Timeout()
+        controller.ledger.exception = Timeout()
         with pytest.raises(QIException) as error:
-            controller.activate(key,'test')
-        assert error.value.code=='QIT003010'
-        controller.ledger.exception=None
-        assert controller.activate(key,'retry')['status']=='active'
+            controller.activate(key, 'test')
+        assert error.value.code == 'QIT003010'
+        controller.ledger.exception = None
+        assert controller.activate(key, 'retry')['status'] == 'active'
     finally:
         close_controller(controller)
 
@@ -233,25 +242,26 @@ def test_repository_advisory_lock_excludes_second_holder(pg_factory, payload):
     assert contender == 'QIT003010'
 
 
-def test_concurrent_activation_and_termination(pg_factory,payload):
-    key,ledger=setup_contract(payload)
-    barrier=Barrier(2)
+def test_concurrent_activation_and_termination(pg_factory, payload):
+    key, ledger = setup_contract(payload)
+    barrier = Barrier(2)
+
     def worker(operation):
-        controller=build_controller(payload,ledger)
+        controller = build_controller(payload, ledger)
         try:
             barrier.wait(timeout=10)
-            return controller.activate(key,'race') if operation=='activate' else controller.terminate(key,'race')
+            return controller.activate(key, 'race') if operation == 'activate' else controller.terminate(key, 'race')
         except QIException as error:
             return error.code
         finally:
             close_controller(controller)
     with ThreadPoolExecutor(max_workers=2) as executor:
-        results=list(executor.map(worker,['activate','terminate']))
-    assert results[1]['status']=='terminated'
-    assert results[0]=='QIT003003' or results[0]['status']=='active'
-    controller=build_controller(payload,ledger)
+        results = list(executor.map(worker, ['activate', 'terminate']))
+    assert results[1]['status'] == 'terminated'
+    assert results[0] == 'QIT003003' or results[0]['status'] == 'active'
+    controller = build_controller(payload, ledger)
     try:
-        assert controller.get_by_key(key)['status']=='terminated'
-        assert ledger.calls[-1][0]=='closure'
+        assert controller.get_by_key(key)['status'] == 'terminated'
+        assert ledger.calls[-1][0] == 'closure'
     finally:
         close_controller(controller)
