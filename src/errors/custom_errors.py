@@ -148,3 +148,11 @@ class LedgerConflict(QIException):
         description = _with_source_code(f"The Ledger reported a conflict for {operation} of contract {contract_key}.", source_code)
         translation = f"O Ledger informou um conflito na operação {operation} do contrato {contract_key}."
         super().__init__(title, self.code, http_status, description, translation)
+
+    @classmethod
+    def pending_split_differs(cls, contract_key: str) -> "LedgerConflict":
+        # Same code, detected by the Contract itself: the Ledger was not called.
+        conflict = cls(contract_key)
+        conflict.description = f"The pending split version of contract {contract_key} was re-sent with different content."
+        conflict.translation = f"A versão pendente do rateio do contrato {contract_key} foi reenviada com conteúdo diferente."
+        return conflict

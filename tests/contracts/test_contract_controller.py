@@ -403,6 +403,10 @@ def test_pending_split_replay_and_current_version(controller, payload):
     different['rent_amount_in_cents'] += 1
     count = len(controller.ledger.calls)
     assert_error('QIT003013', lambda: controller.create_split_version(key, different, 'different'))
+    with pytest.raises(QIException) as conflict:
+        controller.create_split_version(key, different, 'different')
+    assert 'Ledger' not in conflict.value.description and 'Ledger' not in conflict.value.translation
+    assert 'pending split version' in conflict.value.description
     assert count == len(controller.ledger.calls)
     controller.ledger.exception = None
     data['split'].reverse()

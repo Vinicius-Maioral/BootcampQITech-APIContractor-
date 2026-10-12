@@ -159,7 +159,7 @@ class ContractController(BaseController):
                     # there, and re-sending another body would get 409 QIT001032 (same version,
                     # other content), which 01b maps to QIT003013. Answering it here avoids
                     # the call and keeps one code for the same conflict.
-                    raise LedgerConflict(contract_key, 'pending split content differs')
+                    raise LedgerConflict.pending_split_differs(contract_key)
                 version = latest['version']
                 data = self._split_input(latest)
             else:

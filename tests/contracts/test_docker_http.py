@@ -182,7 +182,9 @@ def test_live_pending_split_replay(live):
     changed = deepcopy(data)
     changed['rent_amount_in_cents'] += 1
     count = len(live[4]['ledger'].journal())
-    assert_error(post(live, f'/contracts/{key}/split_versions', changed), 409, 'QIT003013')
+    conflict = post(live, f'/contracts/{key}/split_versions', changed)
+    assert_error(conflict, 409, 'QIT003013')
+    assert 'Ledger' not in conflict.json()['description'], conflict.text
     assert len(live[4]['ledger'].journal()) == count
     data['actor'] = 'retry'
     data['split'] = list(reversed(data['split']))
