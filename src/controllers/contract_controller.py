@@ -155,6 +155,10 @@ class ContractController(BaseController):
             replay = latest['provisioned_at'] is None
             if replay:
                 if self._canonical(data) != self._canonical(self._split_input(latest)):
+                    # Raised locally, not by the Ledger: this pending version may already be
+                    # there, and re-sending another body would get 409 QIT001032 (same version,
+                    # other content), which 01b maps to QIT003013. Answering it here avoids
+                    # the call and keeps one code for the same conflict.
                     raise LedgerConflict(contract_key, 'pending split content differs')
                 version = latest['version']
                 data = self._split_input(latest)
