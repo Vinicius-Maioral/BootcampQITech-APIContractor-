@@ -453,14 +453,22 @@ Os testes leem o seu `.env` sozinhos (é o `tests/conftest.py` que faz
 isso). Trocou a porta da API ali, os testes passam a bater na porta nova
 — você não configura a mesma coisa em dois lugares.
 
-Os testes conversam com a API **por HTTP**, exatamente como um cliente de
-verdade faria. Eles não espiam o código por dentro: nenhum deles importa
-nada de `src/`. Só sabem: "mandei isso, tem que voltar aquilo".
+Os testes de negócio contra a API de pé (`test_docker_http.py`,
+`test_contract_guide.py`, `test_contract_rfc_http.py`, `test_mock_servers.py`)
+conversam com ela **por HTTP**, exatamente como um cliente de verdade
+faria: "mandei isso, tem que voltar aquilo".
 
-> Uma exceção, e ela é honesta: `tests/utils/db_utils.py` fala com o
-> banco direto, por SQLAlchemy. Mas não para **montar** cenário — só
-> para **zerar** o banco entre testes que não podem se atrapalhar. O
-> cenário continua nascendo pela API, com `POST`.
+> Duas exceções, e elas são honestas:
+> - `tests/utils/contract_database.py` fala com o banco direto, mas só
+>   para provar o que nenhuma rota prova (o histórico recusa `UPDATE` e
+>   `DELETE`; o PostgreSQL responde na porta publicada), sempre com
+>   `ROLLBACK`. O cenário continua nascendo pela API, com `POST`.
+> - Os testes isolados (`test_contract_controller.py`,
+>   `test_contract_http.py`, `test_contract_postgres.py`,
+>   `test_connectors.py`) importam `src/` (o `tests/contracts/conftest.py`
+>   o põe no `sys.path`) e rodam o controller em processo, com SQLite ou
+>   um esquema PostgreSQL descartável. Eles cobrem a concorrência e os
+>   erros de rede que o HTTP não reproduz de forma determinística.
 
 Isso tem uma consequência bonita: **este projeto inteiro já foi reescrito
 de um framework para outro, e nenhum teste precisou mudar.** Quando o
@@ -692,6 +700,13 @@ Todo erro da API responde no mesmo formato, com um código próprio:
 Um código estável vale mais que uma mensagem bonita: quem integra com a
 API programa em cima do código, não do texto.
 
+A tabela acima é a da base. Os códigos da contract-api são os `QIT003…`,
+com status e quando acontecem em [docs/contratos.md](docs/contratos.md) e
+na RFC. Um deles tem duas origens com o mesmo código: o `409 QIT003013`
+vem do Ledger (traduzido pelo 01b §3) ou nasce no próprio Contrato, sem
+chamar o Ledger, quando uma versão de split pendente é reenviada com
+corpo diferente; a `description` diz qual das duas foi.
+
 Os números não são sorteados. Eles vêm em duas faixas:
 
 - **`QIT000…`** — os erros que **toda** API tem: JSON errado, sem token,
@@ -786,6 +801,17 @@ não faz.
    ativação, gravada com o valor lido em `GET /clients/{client_key}`.
 4. *O que ela não faz:* não sai nas respostas, não é item do split e não
    acompanha uma mudança posterior no Cadastro.
+
+**A coluna legada `contract.ledger_key`.**
+
+1. *Princípio da base tocado:* o schema só tem o que o código usa.
+2. *Por que não funciona sem:* bancos criados antes do 01b já têm a
+   coluna; tirá-la pede `DROP COLUMN` nesses bancos, e o projeto não tem
+   migration. Mantida no SQL e no model, banco novo e antigo ficam iguais.
+3. *A peça, e por que é a menor:* uma `VARCHAR(255)` nula, sem índice;
+   a identidade do contrato no Ledger é a própria `contract_key` (01b §3 e §4).
+4. *O que ela não faz:* nenhum código a grava nem a lê, e ela não sai nas
+   respostas; pode ser removida quando não houver banco antigo.
 
 **`SchemaHandler.validate_payload`.**
 
