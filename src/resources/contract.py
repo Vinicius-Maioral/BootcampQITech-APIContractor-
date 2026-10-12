@@ -47,9 +47,11 @@ class ContractResource:
         SchemaHandler.validate_payload(payload, 'get_contracts.json')
         filters = {'client_key': params.get('client_key'), 'external_reference': params.get('external_reference'),
                    'party_key': params.get('party_key')}
-        result = await run_in_threadpool(self._invoke, 'get_list', int(params.get('limit', 10)),
-                                         int(params.get('page', 0)), filters)
-        return JSONResponse(result)
+        limit, page = int(params.get('limit', 10)), int(params.get('page', 0))
+        result = await run_in_threadpool(self._invoke, 'get_list', limit, page, filters)
+        # Same page envelope as the base and the Ledger.
+        return JSONResponse({'data': result['contracts'], 'limit': limit, 'page': page,
+                             'is_last_page': result['is_last_page']})
 
     async def on_activate(self, contract_key: str, request: Request):
         payload = await self._body(request)

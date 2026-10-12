@@ -86,7 +86,8 @@ def test_live_lifecycle_headers_bodies_and_idempotent_activation(live):
     assert all(e['trace_id']==headers['X-Request-ID'] for e in final['status_events'])
     assert_error(post(live,'/contracts',payload),409,'QIT003002')
     natural=requests.get(base+'/contracts',params={'client_key':payload['client_key'],'external_reference':payload['external_reference']},headers=headers,timeout=10)
-    assert natural.status_code==200 and natural.json()['contracts'][0]['contract_key']==key
+    assert natural.status_code==200 and natural.json()['data'][0]['contract_key']==key
+    assert {k:v for k,v in natural.json().items() if k!='data'}=={'limit':10,'page':0,'is_last_page':True}
 
 
 @pytest.mark.parametrize('client,status,code',[

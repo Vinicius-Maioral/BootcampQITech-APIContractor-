@@ -64,7 +64,9 @@ def test_http_lifecycle_and_error_contract(controller, payload, monkeypatch):
     assert request(app, 'POST', f'/contracts/{key}/termination', audit)[0] == 200
     status, body = request(app, 'POST', f'/contracts/{key}/activation', audit)
     assert (status, body['code']) == (409, 'QIT003003')
-    assert request(app, 'GET', '/contracts', query=('limit=1&party_key=' + payload['parties'][0]['party_key']).encode())[1]['contracts'][0]['contract_key'] == key
+    status, body = request(app, 'GET', '/contracts', query=('limit=1&party_key=' + payload['parties'][0]['party_key']).encode())
+    assert status == 200 and body['data'][0]['contract_key'] == key
+    assert (body['limit'], body['page'], body['is_last_page']) == (1, 0, True) and 'contracts' not in body
     assert request(app, 'GET', '/contracts', query=b'limit=0')[0] == 400
     assert request(app, 'GET', '/contracts', query=b'limit=1&limit=2')[0] == 400
     assert request(app, 'GET', '/health_check', token=False)[0] == 204
