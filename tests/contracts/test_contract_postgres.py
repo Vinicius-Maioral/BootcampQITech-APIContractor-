@@ -212,6 +212,27 @@ def test_advisory_lock_released_after_dependency_failure(pg_factory,payload):
         close_controller(controller)
 
 
+def test_repository_advisory_lock_excludes_second_holder(pg_factory, payload):
+    key, _ = setup_contract(payload)
+    holder, contender = build_controller(payload), None
+    try:
+        with holder.repository.advisory_lock(key):
+            def contend():
+                other = build_controller(payload)
+                try:
+                    with other.repository.advisory_lock(key):
+                        return 'acquired'
+                except QIException as error:
+                    return error.code
+                finally:
+                    close_controller(other)
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                contender = executor.submit(contend).result(timeout=30)
+    finally:
+        close_controller(holder)
+    assert contender == 'QIT003010'
+
+
 def test_concurrent_activation_and_termination(pg_factory,payload):
     key,ledger=setup_contract(payload)
     barrier=Barrier(2)

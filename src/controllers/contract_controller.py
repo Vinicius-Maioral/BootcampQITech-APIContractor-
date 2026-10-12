@@ -21,7 +21,6 @@ from errors import (
 )
 from models import ContractStatus
 from repositories import ContractRepository
-from utils.contract_lock import contract_lock
 from utils.request_context import get_request_id
 from utils.schema_handler import SchemaHandler
 
@@ -114,7 +113,7 @@ class ContractController(BaseController):
     def activate(self, contract_key: str, actor: str, reason=None) -> dict:
         self._validate_audit(actor, reason)
         self._check_key(contract_key)
-        with contract_lock(self.session, contract_key):
+        with self.repository.advisory_lock(contract_key):
             snapshot = self._snapshot(contract_key)
             if snapshot['status'] == ContractStatus.ACTIVE:
                 version = max(s['version'] for s in snapshot['split_versions'] if s['provisioned_at'])
@@ -143,7 +142,7 @@ class ContractController(BaseController):
     def create_split_version(self, contract_key: str, split_data: dict, actor: str, reason=None) -> dict:
         data = self._validated_data(split_data, actor, reason, 'post_split_version.json')['split']
         self._check_key(contract_key)
-        with contract_lock(self.session, contract_key):
+        with self.repository.advisory_lock(contract_key):
             snapshot = self._snapshot(contract_key)
             self._require_snapshot_status(snapshot, ContractStatus.ACTIVE, 'new split version')
             self._validate_roles(snapshot['parties'])
@@ -177,7 +176,7 @@ class ContractController(BaseController):
     def terminate(self, contract_key: str, actor: str, reason=None) -> dict:
         self._validate_audit(actor, reason)
         self._check_key(contract_key)
-        with contract_lock(self.session, contract_key):
+        with self.repository.advisory_lock(contract_key):
             snapshot = self._snapshot(contract_key)
             if snapshot['status'] == ContractStatus.TERMINATED:
                 raise InvalidContractTransition(snapshot['status'], 'terminated')

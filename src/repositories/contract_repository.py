@@ -1,9 +1,21 @@
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
+from hashlib import sha256
+from threading import Lock, RLock
 from uuid import uuid4
+from weakref import WeakValueDictionary
 
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
+from sqlalchemy.pool import NullPool
 
+from errors import DependencyUnavailable
 from models import Contract, ContractParty, ContractRole, ContractStatus, ContractStatusEvent, SplitItem, SplitVersion
+
+
+_local_locks = WeakValueDictionary()
+_guard = Lock()
 
 
 class ContractRepository:
@@ -11,6 +23,46 @@ class ContractRepository:
 
     def __init__(self, context):
         self.session = context.db_session
+
+    @contextmanager
+    def advisory_lock(self, contract_key):
+        # Why a lock outside the transaction: activation, split version and termination
+        # call the Cadastro/Ledger over HTTP, and 01b forbids holding an SQL transaction
+        # open during HTTP. This advisory lock serializes operations on one contract
+        # across processes, so two of them never provision or close it at the same time.
+        bind = self.session.get_bind()
+        if bind.dialect.name != 'postgresql':
+            # SQLite is used only by isolated tests; production locks span processes.
+            with _guard:
+                lock = _local_locks.setdefault(contract_key, RLock())
+            with lock:
+                yield
+            return
+
+        key = int.from_bytes(sha256(contract_key.encode()).digest()[:8], 'big', signed=True)
+        # A separate, unpooled connection prevents waiting requests exhausting the
+        # application's pool while an operation needs a connection to commit.
+        engine = create_engine(bind.url, poolclass=NullPool, isolation_level='AUTOCOMMIT')
+        try:
+            with engine.connect() as connection:
+                try:
+                    connection.exec_driver_sql("SET lock_timeout = '5s'")
+                    connection.execute(text('SELECT pg_advisory_lock(:key)'), {'key': key})
+                except OperationalError as error:
+                    if getattr(error.orig, 'pgcode', None) == '55P03':
+                        raise DependencyUnavailable('Contract operation contention') from error
+                    raise
+                try:
+                    yield
+                finally:
+                    try:
+                        connection.execute(text('SELECT pg_advisory_unlock(:key)'), {'key': key})
+                    except Exception:
+                        # Never return a connection with an uncertain lock to a pool.
+                        connection.invalidate()
+                        raise
+        finally:
+            engine.dispose()
 
     def get_by_key(self, key, lock=False):
         query = self.session.query(Contract).filter(Contract.contract_key == key)
