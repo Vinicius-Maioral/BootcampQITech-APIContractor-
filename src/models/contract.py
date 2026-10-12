@@ -16,7 +16,10 @@ class Contract(Base):
     end_date = Column(Date)
     # Legacy ledger identity is retained for existing data; 01b uses contract_key.
     ledger_key = Column(String(255))
-    # Commercial snapshot confirmed at activation, reused by subsequent versions.
+    # Why this column: the platform fee is a commercial term of the client (Cadastro),
+    # not a split item. It is snapshotted here at activation so that each new split
+    # version re-sends the same fee to the Ledger without calling the Cadastro (01b §2);
+    # a later change in the client's price does not reprice running contracts.
     platform_fee_percentage = Column(Numeric(7, 4))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
